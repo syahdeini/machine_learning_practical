@@ -35,28 +35,16 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
     Variable Tensor
   """
   dtype = tf.float32
-  var = _variable_on_cpu(
-      name,
-      shape,
-      tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
+  var =  tf.Variable(
+        tf.truncated_normal(
+            [shape[0],shape[1]]), 
+        'weights')
+
   if wd is not None:
     weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
     tf.add_to_collection('losses', weight_decay)
   return var
 
-def _variable_on_cpu(name, shape, initializer):
-  """Helper to create a Variable stored on CPU memory.
-  Args:
-    name: name of the variable
-    shape: list of ints
-    initializer: initializer for Variable
-  Returns:
-    Variable Tensor
-  """
-  with tf.device('/cpu:0'):
-    dtype = tf.float32
-    var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype)
-  return var
 
 num_hidden = 200
 num_hidden2 = 100
@@ -79,14 +67,15 @@ with tf.name_scope('conv-1') as scope:
                                          wd=0.0)
 
     conv = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME')
-    biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    pre_activation = tf.nn.bias_add(conv, biases)
-    conv1 = tf.nn.relu(pre_activation)
+    #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
+    biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
+    # conv1 = tf.nn.relu(pre_activation)
+    local1 = tf.nn.relu(tf.matmul(conv, weights) + biases)
     # pool1
-    pool1 = tf.nn.max_pool(conv1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+    pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
     # norm1
-    norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
+    # norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
                     )
 
 #with tf.name_scope('conv-2') as scope:
@@ -102,26 +91,30 @@ with tf.name_scope('conv-1') as scope:
 #    pool2 = tf.nn.max_pool(norm2, ksize=[1, 3, 3, 1],
 #                         strides=[1, 2, 2, 1], padding='SAME')
 #
-with tf.name_scope('local3') as scope:
+with tf.name_scope('normalReluLayer') as scope:
     # Move everything into depth so we can perform a single matrix multiply.
     reshape = tf.reshape(norm1, [BATCH_SIZE, -1])
     dim = reshape.get_shape()[1].value
     weights = _variable_with_weight_decay('weights3', shape=[dim, 384],
                                           stddev=0.04, wd=0.004)
-    biases = _variable_on_cpu('biases3', [384], tf.constant_initializer(0.1))
+   # biases = _variable_on_cpu('biases3', [384], tf.constant_initializer(0.1))
+    biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases)
-with tf.variable_scope('local4') as scope:
-    weights = _variable_with_weight_decay('weights4', shape=[384, 192],
-                                          stddev=0.04, wd=0.004)
-    biases = _variable_on_cpu('biases4', [192], tf.constant_initializer(0.1))
-    local4 = tf.nn.relu(tf.matmul(local3, weights) + biases)
+
+# with tf.variable_scope('normalReluLaye') as scope:
+#     weights = _variable_with_weight_decay('weights4', shape=[384, 192],
+#                                           stddev=0.04, wd=0.004)
+#     # biases = _variable_on_cpu('biases4', [192], tf.constant_initializer(0.1))
+#     biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
+#     local4 = tf.nn.relu(tf.matmul(local3, weights) + biases)
 
 with tf.variable_scope('softmax_linear') as scope:
-    weights = _variable_with_weight_decay('weights5', [192, NUM_CLASSES],
+    weights = _variable_with_weight_decay('weights5', [384, NUM_CLASSES],
                                           stddev=1/192.0, wd=0.0)
-    biases = _variable_on_cpu('biases5', [NUM_CLASSES],
-                              tf.constant_initializer(0.0))
-    softmax_linear = tf.add(tf.matmul(local4, weights), biases)
+    # biases = _variable_on_cpu('biases5', [NUM_CLASSES],
+    #                           tf.constant_initializer(0.0))
+    biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
+    softmax_linear = tf.add(tf.matmul(local3, weights), biases)
 
     soft_max_out = tf.nn.softmax(softmax_linear)
 
