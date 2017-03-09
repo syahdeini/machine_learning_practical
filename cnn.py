@@ -71,8 +71,9 @@ with tf.name_scope('conv-1') as scope:
     conv = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
+    pre_activation = tf.nn.bias_add(conv, biases)
     # conv1 = tf.nn.relu(pre_activation)
-    local1 = tf.nn.relu(tf.matmul(conv, weights) + biases)
+    local1 = tf.nn.relu(pre_activation)
     # pool1
     pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
