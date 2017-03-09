@@ -52,11 +52,13 @@ num_hidden3 = 50
 BATCH_SIZE = 50
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
+train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
 valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
+valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
 input_dim = 32
 output_dim = 32
 # place holder for input and target
-inputs = tf.placeholder(tf.float32, [BATCH_SIZE, input_dim, output_dim, 3], 'inputs')
+inputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
 targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
 # pdb.set_trace()
 # building graph
@@ -145,7 +147,7 @@ with tf.Session() as sess:
         running_accuracy = 0.
         for input_batch, target_batch in train_data:            
             # running sesssion
-            input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
+            # input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
             # pdb.set_trace()
             _, batch_error, batch_acc = sess.run(
                 [train_step, error, accuracy], 
