@@ -64,13 +64,13 @@ targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
 # building graph
 with tf.name_scope('conv-1') as scope:
     kernel = _variable_with_weight_decay('weights',
-                                         shape=[5, 5, 3, 64],
+                                         shape=[5, 5, 3, 12],
                                          stddev=5e-2,
                                          wd=0.0)
 
     conv = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
+    biases = tf.Variable(tf.zeros([12]), 'biases') 
     pre_activation = tf.nn.bias_add(conv, biases)
     # conv1 = tf.nn.relu(pre_activation)
     local1 = tf.nn.relu(pre_activation)
@@ -96,12 +96,13 @@ with tf.name_scope('conv-1') as scope:
 #
 with tf.name_scope('normalReluLayer') as scope:
     # Move everything into depth so we can perform a single matrix multiply.
-    reshape = tf.reshape(norm1, [BATCH_SIZE, -1])
-    dim = reshape.get_shape()[1].value
-    weights = _variable_with_weight_decay('weights3', shape=[dim, 384],
-                                          stddev=0.04, wd=0.004)
+    tot_shape=pool1.get_shape()[1].value*pool1.get_shape()[2].value*pool1.get_shape()[3].value 
+    reshape = tf.reshape(pool1, [BATCH_SIZE,tot_shape])
+    #dim = reshape.get_shape()[1].value
+    #pdb.set_trace()
+    weights = _variable_with_weight_decay('weights3', shape=[tot_shape, 384],stddev=0.04, wd=0.004)
    # biases = _variable_on_cpu('biases3', [384], tf.constant_initializer(0.1))
-    biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
+    biases = tf.Variable(tf.zeros([384]), 'biases') 
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases)
 
 # with tf.variable_scope('normalReluLaye') as scope:
@@ -116,7 +117,7 @@ with tf.variable_scope('softmax_linear') as scope:
                                           stddev=1/192.0, wd=0.0)
     # biases = _variable_on_cpu('biases5', [NUM_CLASSES],
     #                           tf.constant_initializer(0.0))
-    biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
+    biases = tf.Variable(tf.zeros([NUM_CLASSES]), 'biases') 
     softmax_linear = tf.add(tf.matmul(local3, weights), biases)
 
     soft_max_out = tf.nn.softmax(softmax_linear)
@@ -152,7 +153,7 @@ with tf.Session() as sess:
             # pdb.set_trace()
             _, batch_error, batch_acc = sess.run(
                 [train_step, error, accuracy], 
-                feed_dict={inputs: input_batch.eval(), targets: target_batch})
+                feed_dict={inputs: input_batch, targets: target_batch})
             # calculating error and accuracy for batch
             running_error += batch_error
             running_accuracy += batch_acc
@@ -169,7 +170,7 @@ with tf.Session() as sess:
             valid_error = 0.
             valid_accuracy = 0.
             for input_batch, target_batch in valid_data:
-                input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
+                #input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
                 #pdb.set_trace()
                 batch_error, batch_acc = sess.run(
                     [error, accuracy], 
