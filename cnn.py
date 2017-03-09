@@ -37,7 +37,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
   dtype = tf.float32
   var =  tf.Variable(
         tf.truncated_normal(
-            [shape]), 
+            shape), 
         'weights')
 
   if wd is not None:
