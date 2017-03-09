@@ -76,7 +76,7 @@ with tf.name_scope('conv-1') as scope:
                          padding='SAME')
     # norm1
     # norm1 = tf.nn.lrn(pool1, 4, bias=1.0, alpha=0.001 / 9.0, beta=0.75,
-                    )
+                    # )
 
 #with tf.name_scope('conv-2') as scope:
 #    kernel = _variable_with_weight_decay('weights2',
