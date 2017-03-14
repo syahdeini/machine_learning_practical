@@ -49,7 +49,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
 num_hidden = 200
 num_hidden2 = 100
 num_hidden3 = 50
-BATCH_SIZE = 50
+BATCH_SIZE = 40
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
 train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
@@ -60,7 +60,6 @@ output_dim = 32
 # place holder for input and target
 inputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
 targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
-# pdb.set_trace()
 # building graph
 with tf.name_scope('conv-1') as scope:
     n_actv_map = 16
@@ -135,14 +134,14 @@ with tf.name_scope('conv-4') as scope:
 with tf.name_scope('normalReluLayer') as scope:
     in_dim = 20
     # Move everything into depth so we can perform a single matrix multiply.
-    shape_pool1 = pool1.get_shape().as_list()
-    out_dim = shape_pool1[1]*shape_pool1[2]*shape_pool1[3]
-    reshape = tf.reshape(pool1, [1,out_dim])
+    shape_pool = pool4.get_shape().as_list()
+    out_dim = shape_pool[1]*shape_pool[2]*shape_pool[3]
+    pdb.set_trace()
+    reshape = tf.reshape(pool4, [BATCH_SIZE,out_dim])
    # dim = reshape.get_shape()[1].value
     weights5 = _variable_with_weight_decay('weights3', shape=[out_dim,out_dim],
                                           stddev=0.04, wd=0.004)
     biases5 = tf.Variable(tf.zeros([out_dim]), 'biases') 
-    pdb.set_trace()
     local5 = tf.nn.relu(tf.matmul(reshape, weights5) + biases5)
 
 # with tf.variable_scope('normalReluLaye') as scope:
@@ -153,6 +152,7 @@ with tf.name_scope('normalReluLayer') as scope:
 #     local4 = tf.nn.relu(tf.matmul(local3, weights) + biases)
 
 with tf.variable_scope('softmax_linear') as scope:
+    pdb.set_trace()
     weights = _variable_with_weight_decay('weights5', [out_dim, NUM_CLASSES],
                                           stddev=1/192.0, wd=0.0)
     # biases = _variable_on_cpu('biases5', [NUM_CLASSES],
@@ -190,7 +190,6 @@ with tf.Session() as sess:
         for input_batch, target_batch in train_data:            
             # running sesssion
             # input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
-            # pdb.set_trace()
             _, batch_error, batch_acc = sess.run(
                 [train_step, error, accuracy], 
                 feed_dict={inputs: input_batch, targets: target_batch})
@@ -210,8 +209,7 @@ with tf.Session() as sess:
             valid_error = 0.
             valid_accuracy = 0.
             for input_batch, target_batch in valid_data:
-                input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
-                #pdb.set_trace()
+                #input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
                 batch_error, batch_acc = sess.run(
                     [error, accuracy], 
                     feed_dict={inputs: input_batch, targets: target_batch})
@@ -224,7 +222,7 @@ with tf.Session() as sess:
             acc_valids.append(valid_accuracy)
             err_valids.append(valid_error)
 
-list_to_file(err_train_list,"error_trains_model9.txt")
-list_to_file(acc_train_list,"acc_trains_model9.txt")
-list_to_file(err_valids,"error_valid_model9.txt")
-list_to_file(acc_valids,"acc_valid_model9.txt")
+list_to_file(err_train_list,"error_trains_stanford.txt")
+list_to_file(acc_train_list,"acc_trains_stanford.txt")
+list_to_file(err_valids,"error_valid_stanford.txt")
+list_to_file(acc_valids,"acc_valid_stanford.txt")
