@@ -70,12 +70,30 @@ with tf.name_scope('conv-1') as scope:
     # pool1
     pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
+
+with tf.name_scope('conv-2') as scope:
+    pdb.set_trace()
+    kernel2 = _variable_with_weight_decay('weights2',
+                                         shape=[5, 5, 3, conv1_out_size],
+                                         stddev=5e-2,
+                                         wd=0.0)
+
+    conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME')
+    #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
+    biases2 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    pre_activation = tf.nn.bias_add(conv, biases)
+    # conv1 = tf.nn.relu(pre_activation)
+    local2 = tf.nn.relu(pre_activation)
+    # pool1
+    pool2 = tf.nn.max_pool(local2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME')
     
 # Move everything into depth so we can perform a single matrix multiply.
 with tf.name_scope('Dense-Relu_Layer') as scope:
     # flattening the input
-    tot_shape=pool1.get_shape()[1].value*pool1.get_shape()[2].value*pool1.get_shape()[3].value
-    reshape = tf.reshape(pool1, [BATCH_SIZE,tot_shape])
+    last_layer = pool2
+    tot_shape=last_layer.get_shape()[1].value*last_layer.get_shape()[2].value*last_layer.get_shape()[3].value
+    reshape = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
     weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
     biases = tf.Variable(tf.zeros([tot_shape]), 'biases') 
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases)
