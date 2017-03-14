@@ -131,7 +131,7 @@ with tf.Session() as sess:
         err_train_list.append(running_error)
 
         # validation
-        if  (e + 1) % 5 == 5:
+        if  (e + 1) % 5 == 0:
             valid_error = 0.
             valid_accuracy = 0.
             for input_batch, target_batch in valid_data:

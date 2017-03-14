@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pdb
 
 
-experiment_name = "simple_conv"
+experiment_name = "2_conv"
 
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
@@ -72,9 +72,9 @@ with tf.name_scope('conv-1') as scope:
                          padding='SAME')
 
 with tf.name_scope('conv-2') as scope:
-    pdb.set_trace()
+#    pdb.set_trace()
     kernel2 = _variable_with_weight_decay('weights2',
-                                         shape=[5, 5, 3, conv1_out_size],
+                                         shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
                                          wd=0.0)
 
@@ -149,7 +149,7 @@ with tf.Session() as sess:
         err_train_list.append(running_error)
 
         # validation
-        if  (e + 1) % 5 == 5:
+        if  (e + 1) % 5 == 0:
             valid_error = 0.
             valid_accuracy = 0.
             for input_batch, target_batch in valid_data:
