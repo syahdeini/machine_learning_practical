@@ -5,14 +5,20 @@ import numpy as np
 from mlp.data_providers import CIFAR10DataProvider, CIFAR100DataProvider
 import matplotlib.pyplot as plt
 import pdb
-
+import math
 
 experiment_name = "simple_conv"
 
 
 # for visualization
 def getActivations(layer,stimuli):
-    units = sess.run(layer,feed_dict={x:np.reshape(stimuli,[1,784],order='F'),keep_prob:1.0})
+    #pdb.set_trace()
+
+    # pdb.set_trace()
+    stimuli = stimuli[0].reshape(-1,32,32,3)
+    units = sess.run(layer,feed_dict={inputs:stimuli})
+    # units.reshape([1,units.shape[1]*units.shape[2]*units.shape[3]])
+    pdb.set_trace()
     plotNNFilter(units)
 
 def plotNNFilter(units):
@@ -23,8 +29,14 @@ def plotNNFilter(units):
     for i in range(filters):
         plt.subplot(n_rows, n_columns, i+1)
         plt.title('Filter ' + str(i))
-    plt.imshow(units[0,:,:,i], interpolation="nearest", cmap="gray")
-
+        # plt.plot(units[0,:,:,i])
+        # plt.savefig("hahaha.png")
+        # pdb.set_trace()
+        plt.imshow(units[0,:,:,i],interpolation="nearest", cmap="gray")
+        plt.savefig("plot_"+str(i)+".png") #, interpolation="nearest", cmap="gray")
+        plt.clf()
+        plt.hist(units[0,:,:,i])
+        plt.savefig("hist_"+str(i)+".png") #, interpolation="nearest", cmap="gray")
 
 
 
@@ -88,7 +100,6 @@ with tf.name_scope('conv-1') as scope:
     # conv1 = tf.nn.relu(pre_activation)
     local1 = tf.nn.relu(pre_activation)
     # pool1
-    pdb.set_trace()   
     pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
    
@@ -154,7 +165,7 @@ with tf.Session() as sess:
         err_train_list.append(running_error)
 
         # validation
-        if  (e + 1) % 2 == 0:
+        if  (e + 1) % 1 == 0:
             valid_error = 0.
             valid_accuracy = 0.
             visualize = True
