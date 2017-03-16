@@ -3,7 +3,7 @@ import os
 import tensorflow as tf
 import numpy as np
 from mlp.data_providers import CIFAR10DataProvider, CIFAR100DataProvider
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import pdb
 
 
@@ -104,9 +104,8 @@ with tf.name_scope('dropout_conv1') as scope:
 
 #CONV2
 with tf.name_scope('conv-2') as scope:
-    pdb.set_trace()
     kernel2 = _variable_with_weight_decay('weights',
-                                         shape=[5, 5, 96/2, 192],
+                                         shape=[5, 5, 96, 192],
                                          stddev=5e-2,
                                          wd=0.0)
 
@@ -151,9 +150,8 @@ with tf.name_scope('dropout_conv2') as scope:
     dropout2 = tf.nn.dropout(pool2,keep_prob=0.5,name="dropout2") 
 
 with tf.name_scope('conv-3') as scope:
-    pdb.set_trace()
     kernel3 = _variable_with_weight_decay('weights',
-                                         shape=[3, 3, 96/2, 192],
+                                         shape=[3, 3, 192, 192],
                                          stddev=5e-2,
                                          wd=0.0)
 
@@ -173,7 +171,7 @@ with tf.name_scope('cccp-5') as scope:
 
     conv_cp6 = tf.nn.conv2d(local3, kernel_cp6, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases_cp6 = tf.Variable(tf.zeros([10]), 'biases') 
+    biases_cp6 = tf.Variable(tf.zeros([192]), 'biases') 
     pre_activation_cp6 = tf.nn.bias_add(conv_cp6, biases_cp6)
     # conv1 = tf.nn.relu(pre_activation)
     local_cp6 = tf.nn.relu(pre_activation_cp6)
@@ -197,9 +195,12 @@ with tf.name_scope('avg_pool_conv3') as scope:
 
 
 with tf.variable_scope('softmax_linear') as scope:
-    weights = _variable_with_weight_decay('weights5', [10, NUM_CLASSES],
+    pool_shape = pool3.get_shape().as_list()
+    out_size = pool_shape[1]*pool_shape[2]*pool_shape[3]
+    pool3 = tf.reshape(pool3,[BATCH_SIZE,out_size])
+    weights = _variable_with_weight_decay('weights5', [out_size, 10],
                                           stddev=1.0, wd=0.0)
-    biases = tf.Variable(tf.zeros([NUM_CLASSES]), 'biases') 
+    biases = tf.Variable(tf.zeros([10]), 'biases') 
     softmax_linear = tf.add(tf.matmul(pool3, weights), biases)
     soft_max_out = tf.nn.softmax(softmax_linear)
 
