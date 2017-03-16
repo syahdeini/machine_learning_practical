@@ -68,8 +68,11 @@ with tf.name_scope('conv-1') as scope:
     # conv1 = tf.nn.relu(pre_activation)
     local1 = tf.nn.relu(pre_activation)
     # pool1
+    pdb.set_trace()   
     pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
+   
+#  dropout = tf.nn.dropout
     
 # Move everything into depth so we can perform a single matrix multiply.
 with tf.name_scope('Dense-Relu_Layer') as scope:
