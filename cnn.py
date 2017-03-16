@@ -9,6 +9,26 @@ import pdb
 
 experiment_name = "simple_conv"
 
+
+# for visualization
+def getActivations(layer,stimuli):
+    units = sess.run(layer,feed_dict={x:np.reshape(stimuli,[1,784],order='F'),keep_prob:1.0})
+    plotNNFilter(units)
+
+def plotNNFilter(units):
+    filters = units.shape[3]
+    plt.figure(1, figsize=(20,20))
+    n_columns = 6
+    n_rows = math.ceil(filters / n_columns) + 1
+    for i in range(filters):
+        plt.subplot(n_rows, n_columns, i+1)
+        plt.title('Filter ' + str(i))
+    plt.imshow(units[0,:,:,i], interpolation="nearest", cmap="gray")
+
+
+
+
+
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
         tf.truncated_normal(
@@ -114,7 +134,7 @@ acc_valids = []
 err_valids = []
 with tf.Session() as sess:
     sess.run(init)
-    for e in range(120):
+    for e in range(4):
         running_error = 0.
         running_accuracy = 0.
         for input_batch, target_batch in train_data:            
@@ -134,14 +154,18 @@ with tf.Session() as sess:
         err_train_list.append(running_error)
 
         # validation
-        if  (e + 1) % 5 == 0:
+        if  (e + 1) % 2 == 0:
             valid_error = 0.
             valid_accuracy = 0.
+            visualize = True
             for input_batch, target_batch in valid_data:
                 #input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
                 batch_error, batch_acc = sess.run(
                     [error, accuracy], 
                     feed_dict={inputs: input_batch, targets: target_batch})
+                if visualize:
+                        getActivations(local1, input_batch)
+                        visualize = False
                 valid_error += batch_error
                 valid_accuracy += batch_acc
             valid_error /= valid_data.num_batches
