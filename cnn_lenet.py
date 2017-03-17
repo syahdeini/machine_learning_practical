@@ -38,18 +38,19 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
   var =  tf.Variable(
         tf.truncated_normal(
             shape), 
-        'weights')
+        name)
 
-  if wd is not None:
+  if wd > 0:
     weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
     tf.add_to_collection('losses', weight_decay)
+    pdb.set_trace()
   return var
 
 
 num_hidden = 200
 num_hidden2 = 100
 num_hidden3 = 50
-BATCH_SIZE = 40
+BATCH_SIZE = 100
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
 train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
@@ -81,7 +82,7 @@ with tf.name_scope('conv-1') as scope:
 with tf.name_scope('conv-2') as scope:
     n_actv_map = 16
     kernel2 = _variable_with_weight_decay('weights-conv2',
-                                         shape=[5, 5, 16,n_actv_map],
+                                         shape=[5, 5, 6,n_actv_map],
                                          stddev=5e-2,
                                          wd=0.0)
 
@@ -98,10 +99,10 @@ with tf.name_scope('conv-2') as scope:
 with tf.name_scope('normalReluLayer') as scope:
     in_dim = 16
     # Move everything into depth so we can perform a single matrix multiply.
-    shape_pool = pool4.get_shape().as_list()
+    shape_pool = pool2.get_shape().as_list()
     out_dim = shape_pool[1]*shape_pool[2]*shape_pool[3]
   #  pdb.set_trace()
-    reshapeN1 = tf.reshape(pool4, [BATCH_SIZE,out_dim])
+    reshapeN1 = tf.reshape(pool2, [BATCH_SIZE,out_dim])
    # dim = reshape.get_shape()[1].value
     weightsN1 = _variable_with_weight_decay('weights3', shape=[out_dim,120],
                                           stddev=0.04, wd=0.0)
@@ -116,10 +117,10 @@ with tf.name_scope('normalReluLayer2') as scope:
 ##    pdb.set_trace()
 #    reshape = tf.reshape(pool4, [BATCH_SIZE,out_dim])
    # dim = reshape.get_shape()[1].value
-    weightsN2 = _variable_with_weight_decay('weights3', shape=[out_dim,84],
+    weightsN2 = _variable_with_weight_decay('weights3', shape=[in_dim,84],
                                           stddev=0.04, wd=0.0)
     biasesN2 = tf.Variable(tf.zeros([84]), 'biases') 
-    localN2 = tf.nn.relu(tf.matmul(localN2, weightsN2) + biasesN2)
+    localN2 = tf.nn.relu(tf.matmul(localN1, weightsN2) + biasesN2)
 
 with tf.name_scope('normalReluLayer2') as scope:
     in_dim = 84
@@ -129,10 +130,10 @@ with tf.name_scope('normalReluLayer2') as scope:
 ##    pdb.set_trace()
 #    reshape = tf.reshape(pool4, [BATCH_SIZE,out_dim])
    # dim = reshape.get_shape()[1].value
-    weightsN3 = _variable_with_weight_decay('weights3', shape=[out_dim,10],
+    weightsN3 = _variable_with_weight_decay('weights3', shape=[in_dim,10],
                                           stddev=0.04, wd=0.0)
     biasesN3 = tf.Variable(tf.zeros([10]), 'biases') 
-    localN3 = tf.nn.relu(tf.matmul(localN3, weightsN3) + biasesN3)
+    localN3 = tf.nn.relu(tf.matmul(localN2, weightsN3) + biasesN3)
 
 
 # with tf.variable_scope('normalReluLaye') as scope:
@@ -145,7 +146,7 @@ with tf.name_scope('normalReluLayer2') as scope:
 with tf.variable_scope('softmax_linear') as scope:
     out_dim = 10
     weights = _variable_with_weight_decay('weights5', [out_dim, NUM_CLASSES],
-                                          stddev=1/192.0, wd=0.0)
+                                          stddev=0.05, wd=0.0)
     # biases = _variable_on_cpu('biases5', [NUM_CLASSES],
     #                           tf.constant_initializer(0.0))
     biases = tf.Variable(tf.zeros([NUM_CLASSES]), 'biases') 
@@ -164,7 +165,7 @@ with tf.name_scope('accuracy'):
             tf.float32))
     
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer().minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
@@ -181,12 +182,14 @@ with tf.Session() as sess:
         for input_batch, target_batch in train_data:            
             # running sesssion
             # input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
-            _, batch_error, batch_acc = sess.run(
+            _our, batch_error, batch_acc = sess.run(
                 [train_step, error, accuracy], 
                 feed_dict={inputs: input_batch, targets: target_batch})
             # calculating error and accuracy for batch
-            running_error += batch_error
+	    running_error += batch_error
             running_accuracy += batch_acc
+#            print("batch acc"+str(batch_acc))
+
         # averaging the error and accuracy
         running_error /= train_data.num_batches
         running_accuracy /= train_data.num_batches
@@ -206,6 +209,7 @@ with tf.Session() as sess:
                     feed_dict={inputs: input_batch, targets: target_batch})
                 valid_error += batch_error
                 valid_accuracy += batch_acc
+                #print("batch acc"+str(batch_acc))
             valid_error /= valid_data.num_batches
             valid_accuracy /= valid_data.num_batches
             print('                 err(valid)={0:.2f} acc(valid)={1:.2f}'
@@ -213,7 +217,7 @@ with tf.Session() as sess:
             acc_valids.append(valid_accuracy)
             err_valids.append(valid_error)
 
-list_to_file(err_train_list,"error_trains_stanford.txt")
-list_to_file(acc_train_list,"acc_trains_stanford.txt")
-list_to_file(err_valids,"error_valid_stanford.txt")
-list_to_file(acc_valids,"acc_valid_stanford.txt")
+list_to_file(err_train_list,"lenet_error_trains_stanford.txt")
+list_to_file(acc_train_list,"lenet_acc_trains_stanford.txt")
+list_to_file(err_valids,"lenet_error_valid_stanford.txt")
+list_to_file(acc_valids,"lenet_acc_valid_stanford.txt")
