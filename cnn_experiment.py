@@ -8,7 +8,7 @@ import pdb
 
 
 experiment_name = "nin_"
-
+epoch = 50
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
         tf.truncated_normal(
@@ -61,8 +61,7 @@ with tf.name_scope('conv-1') as scope:
                                          shape=[5, 5, 3, 192],
                                          stddev=5e-2,
                                          wd=0.0)
-    inputs = tf.image.per_image_standardization(inputs) # put contrast normalization
-    inputs = tf.image.per_image_whitening(inputs)
+
     conv1 = tf.nn.conv2d(inputs, kernel1, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases1 = tf.Variable(tf.zeros([192]), 'biases') 
@@ -75,7 +74,7 @@ with tf.name_scope('cccp-1') as scope:
     kernel_cp1 = _variable_with_weight_decay('weights_cccp1',
                                          shape=[1, 1, 192, 160],
                                          stddev=5e-2,
-                                         wd=1.0)
+                                         wd=0.0)
 
     conv_cp1 = tf.nn.conv2d(local1, kernel_cp1, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -86,13 +85,13 @@ with tf.name_scope('cccp-1') as scope:
     # pool1
 with tf.name_scope('cccp-2') as scope:
     kernel_cp2 = _variable_with_weight_decay('weights_cccp2',
-                                         shape=[1, 1, 160, 96],
+                                         shape=[1, 1, 160, 32],
                                          stddev=5e-2,
                                          wd=0.0)
 
     conv_cp2 = tf.nn.conv2d(local_cp1, kernel_cp2, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases_cp2 = tf.Variable(tf.zeros([96]), 'biases') 
+    biases_cp2 = tf.Variable(tf.zeros([32]), 'biases') 
     pre_activation_cp2 = tf.nn.bias_add(conv_cp2, biases_cp2)
     # conv1 = tf.nn.relu(pre_activation)
     local_cp2 = tf.nn.relu(pre_activation_cp2)
@@ -100,7 +99,7 @@ with tf.name_scope('cccp-2') as scope:
 with tf.name_scope('max_pool_conv1') as scope:
     pool1 = tf.nn.max_pool(local_cp2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
-with tf.name_scope('dropout_conv1') as scope:
+'''with tf.name_scope('dropout_conv1') as scope:
     dropout1 = tf.nn.dropout(pool1,keep_prob=0.5,name="dropout1") 
 
 #CONV2
@@ -193,12 +192,25 @@ with tf.name_scope('avg_pool_conv3') as scope:
     pool3 = tf.nn.max_pool(local_cp6, ksize=[1, 8, 8, 1], strides=[1, 1, 1, 1],
                          padding='SAME')
 
+'''
+
+
+
+# Move everything into depth so we can perform a single matrix multiply.
+with tf.name_scope('Dense-Relu_Layer') as scope:
+    # flattening the input
+    tot_shape=pool1.get_shape()[1].value*pool1.get_shape()[2].value*pool1.get_shape()[3].value
+    reshape = tf.reshape(pool1, [BATCH_SIZE,tot_shape])
+    weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
+    biases = tf.Variable(tf.zeros([tot_shape]), 'biases') 
+    local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases)
+
 
 
 with tf.variable_scope('softmax_linear') as scope:
-    pool_shape = pool3.get_shape().as_list()
-    out_size = pool_shape[1]*pool_shape[2]*pool_shape[3]
-    pool3 = tf.reshape(pool3,[BATCH_SIZE,out_size])
+    #pool_shape = pool3.get_shape().as_list()
+    out_size = local3.get_shape()[1].value#pool_shape[1]*pool_shape[2]*pool_shape[3]
+    pool3 = tf.reshape(local3,[BATCH_SIZE,out_size])
     weights = _variable_with_weight_decay('weights5', [out_size, 10],
                                           stddev=1.0, wd=0.0)
     biases = tf.Variable(tf.zeros([10]), 'biases') 
@@ -228,7 +240,7 @@ acc_valids = []
 err_valids = []
 with tf.Session() as sess:
     sess.run(init)
-    for e in range(120):
+    for e in range(epoch):
         running_error = 0.
         running_accuracy = 0.
         for input_batch, target_batch in train_data:            
