@@ -61,7 +61,8 @@ with tf.name_scope('conv-1') as scope:
                                          shape=[5, 5, 3, 192],
                                          stddev=5e-2,
                                          wd=0.0)
-
+    inputs = tf.image.per_image_standardization(inputs) # put contrast normalization
+    inputs = tf.image.per_image_whitening(inputs)
     conv1 = tf.nn.conv2d(inputs, kernel1, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases1 = tf.Variable(tf.zeros([192]), 'biases') 
