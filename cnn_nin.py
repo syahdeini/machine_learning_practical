@@ -37,6 +37,10 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
   return var
 
 
+def normalize_and_whitening(imgs):
+ 	return np.asarray([tf.image.per_image_standardization(img).eval() 
+		      for img in imgs])
+
 num_hidden = 200
 num_hidden2 = 100
 num_hidden3 = 50
@@ -61,8 +65,8 @@ with tf.name_scope('conv-1') as scope:
                                          shape=[5, 5, 3, 192],
                                          stddev=5e-2,
                                          wd=0.0)
-    inputs = tf.image.per_image_standardization(inputs) # put contrast normalization
-    inputs = tf.image.per_image_whitening(inputs)
+#    inputs = tf.image.per_image_standardization(inputs) # put contrast normalization
+#    inputs = tf.image.per_image_whitening(inputs)
     conv1 = tf.nn.conv2d(inputs, kernel1, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases1 = tf.Variable(tf.zeros([192]), 'biases') 
@@ -233,7 +237,8 @@ with tf.Session() as sess:
         running_accuracy = 0.
         for input_batch, target_batch in train_data:            
             # running sesssion
-            _, batch_error, batch_acc = sess.run(
+	    input_batch = normalize_and_whitening(input_batch)
+	    _, batch_error, batch_acc = sess.run(
                 [train_step, error, accuracy], 
                 feed_dict={inputs: input_batch, targets: target_batch})
             # calculating error and accuracy for batch
