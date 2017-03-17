@@ -38,13 +38,15 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
 
 
 def normalize_and_whitening(imgs):
- 	return np.asarray([tf.image.per_image_standardization(img).eval() 
+ 	return np.asarray([ tf.image.per_image_standardization(
+                              tf.image.rgb_to_hsv(img)
+                                      ).eval()
 		      for img in imgs])
 
 num_hidden = 200
 num_hidden2 = 100
 num_hidden3 = 50
-BATCH_SIZE = 50
+BATCH_SIZE = 100
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
 train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
@@ -67,6 +69,8 @@ with tf.name_scope('conv-1') as scope:
                                          wd=0.0)
 #    inputs = tf.image.per_image_standardization(inputs) # put contrast normalization
 #    inputs = tf.image.per_image_whitening(inputs)
+#    inputs = tf.map_fn(lambda img: tf.image.per_image_standardization(tf.image.rgb_to_hsv(img)), inputs,dtype = tf.float32)
+ #   pdb.set_trace()
     conv1 = tf.nn.conv2d(inputs, kernel1, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases1 = tf.Variable(tf.zeros([192]), 'biases') 
@@ -105,10 +109,10 @@ with tf.name_scope('max_pool_conv1') as scope:
     pool1 = tf.nn.max_pool(local_cp2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
 with tf.name_scope('dropout_conv1') as scope:
-    dropout1 = tf.nn.dropout(pool1,keep_prob=0.5,name="dropout1") 
+    dropout1 = tf.nn.dropout(pool1,keep_prob=0.5, name="dropout1") 
 
 #CONV2
-with tf.name_scope('conv-2') as scope:
+"""with tf.name_scope('conv-2') as scope:
     kernel2 = _variable_with_weight_decay('weights',
                                          shape=[5, 5, 96, 192],
                                          stddev=5e-2,
@@ -153,14 +157,14 @@ with tf.name_scope('avg_pool_conv2') as scope:
                          padding='SAME')
 with tf.name_scope('dropout_conv2') as scope:
     dropout2 = tf.nn.dropout(pool2,keep_prob=0.5,name="dropout2") 
-
+"""
 with tf.name_scope('conv-3') as scope:
     kernel3 = _variable_with_weight_decay('weights',
-                                         shape=[3, 3, 192, 192],
+                                         shape=[3, 3, 96, 192],
                                          stddev=5e-2,
                                          wd=0.0)
 
-    conv3 = tf.nn.conv2d(dropout2, kernel3, [1, 1, 1, 1], padding='SAME')
+    conv3 = tf.nn.conv2d(dropout1, kernel3, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases3 = tf.Variable(tf.zeros([192]), 'biases') 
     pre_activation3 = tf.nn.bias_add(conv3, biases3)
@@ -221,7 +225,7 @@ with tf.name_scope('accuracy'):
 
 # use adam optimizer 
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer().minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=2.0).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
@@ -235,16 +239,24 @@ with tf.Session() as sess:
     for e in range(120):
         running_error = 0.
         running_accuracy = 0.
+        count=0
         for input_batch, target_batch in train_data:            
             # running sesssion
-	    input_batch = normalize_and_whitening(input_batch)
-	    _, batch_error, batch_acc = sess.run(
+            #print("shape ",input_batch.shape)
+	    #input_batch = normalize_and_whitening(input_batch)
+            input_batch = tf.map_fn(lambda img: tf.image.per_image_standardization(img), input_batch)
+            #count+=1
+	    #print("finish normalizeing")
+            _, batch_error, batch_acc = sess.run(
                 [train_step, error, accuracy], 
                 feed_dict={inputs: input_batch, targets: target_batch})
             # calculating error and accuracy for batch
             running_error += batch_error
             running_accuracy += batch_acc
+ 	    #print("count"+str(count))
+       
         # averaging the error and accuracy
+        print("calculating error")
         running_error /= train_data.num_batches
         running_accuracy /= train_data.num_batches
         print('End of epoch {0:02d}: err(train)={1:.2f} acc(train)={2:.2f}'
