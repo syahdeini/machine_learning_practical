@@ -7,7 +7,22 @@ import matplotlib.pyplot as plt
 import pdb
 
 
+
+##### CONSTANT #####################################################
+
+
 experiment_name = "5_layer_conv"
+NUM_CLASSES = 10
+train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
+train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
+valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
+valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
+
+# place holder for input and target
+sinputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
+targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
+
+#################################################################################
 
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
@@ -37,25 +52,26 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
   return var
 
 
-num_hidden = 200
-num_hidden2 = 100
-num_hidden3 = 50
-BATCH_SIZE = 40
-NUM_CLASSES = 10
-train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
-train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
-valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
-valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
-input_dim = 32
-output_dim = 32
-# place holder for input and target
-inputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
-targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
-# pdb.set_trace()
-# building graph
 
+def getActivations(layer,stimuli,filename):
+    stimuli = stimuli[0].reshape(-1,32,32,3)
+    units = sess.run(layer,feed_dict={inputs:stimuli})
+    pdb.set_trace()
+    # units.reshape([1,units.shape[1]*units.shape[2]*units.shape[3]])
+    # plotNNFilter(units)
+
+
+
+
+
+#################### building graph  #################################################
+
+convolution_list = {}
+pre_activation_list = {}
+pool = {}
 conv1_out_size = 14 #number of output channel of first convolutional 
 with tf.name_scope('conv-1') as scope:
+    pdb.set_trace()
     kernel = _variable_with_weight_decay('weights',
                                          shape=[5, 5, 3, conv1_out_size],
                                          stddev=5e-2,
@@ -70,9 +86,8 @@ with tf.name_scope('conv-1') as scope:
     # pool1
     pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
-
+  
 with tf.name_scope('conv-2') as scope:
-#    pdb.set_trace()
     kernel2 = _variable_with_weight_decay('weights2',
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
@@ -164,12 +179,15 @@ with tf.name_scope('accuracy'):
             tf.equal(tf.argmax(soft_max_out, 1), tf.argmax(targets, 1)), 
             tf.float32))
 
+
 # use adam optimizer 
 with tf.name_scope('train'):
     train_step = tf.train.AdamOptimizer(learning_rate=0.001).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
+
+#########################################################################
 
 acc_train_list = []
 err_train_list = []
@@ -186,6 +204,7 @@ with tf.Session() as sess:
                 [train_step, error, accuracy], 
                 feed_dict={inputs: input_batch, targets: target_batch})
             # calculating error and accuracy for batch
+            getActivations(local1,input_batch[0],)
             running_error += batch_error
             running_accuracy += batch_acc
         # averaging the error and accuracy
