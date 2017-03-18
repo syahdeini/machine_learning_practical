@@ -20,7 +20,7 @@ valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
 valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
 
 # place holder for input and target
-sinputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
+inputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
 targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
 
 #################################################################################
@@ -49,7 +49,7 @@ def getActivations(layer,stimuli,filename):
     stimuli = stimuli[0].reshape(-1,32,32,3)
     units = sess.run(layer,feed_dict={inputs:stimuli})
     pdb.set_trace()
-    list_to_file()
+    list_to_file(units,filename)
     # units.reshape([1,units.shape[1]*units.shape[2]*units.shape[3]])
     # plotNNFilter(units)
 
@@ -72,8 +72,8 @@ def plotNNFilter(units):
 
 
 def plot_output_layers(stimuli,layers):
-  for key in stimuli:
-    conv,relu,pool = stimuli[key]
+  for key in layers:
+    conv,relu,pool = layers[key]
     getActivations(conv,stimuli,key+'_conv')
     getActivations(relu,stimuli,key+'_relu')
     getActivations(relu,stimuli,key+'_pool')
@@ -231,7 +231,7 @@ with tf.Session() as sess:
         acc_train_list.append(running_accuracy)
         err_train_list.append(running_error)
         # validation
-        if  (e + 1) % 5 == 0:
+        if  (e + 1) % 1 == 0:
             valid_error = 0.
             valid_accuracy = 0.
             for input_batch, target_batch in valid_data:
@@ -241,7 +241,7 @@ with tf.Session() as sess:
                     feed_dict={inputs: input_batch, targets: target_batch})
                 valid_error += batch_error
                 valid_accuracy += batch_acc
-                plot_output_layers()
+                plot_output_layers(input_batch,layer_propertieS)
 
             valid_error /= valid_data.num_batches
             valid_accuracy /= valid_data.num_batches
