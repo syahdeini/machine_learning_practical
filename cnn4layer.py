@@ -25,15 +25,6 @@ targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
 
 #################################################################################
 
-def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
-    weights = tf.Variable(
-        tf.truncated_normal(
-            [input_dim, output_dim], stddev=2. / (input_dim + output_dim)**0.5), 
-        'weights')
-    biases = tf.Variable(tf.zeros([output_dim]), 'biases')
-    outputs = nonlinearity(tf.matmul(inputs, weights) + biases)
-    return outputs
-
 def list_to_file(thelist,filename):
     thefile = open(filename, 'w')
     for item in thelist:
@@ -58,100 +49,125 @@ def getActivations(layer,stimuli,filename):
     stimuli = stimuli[0].reshape(-1,32,32,3)
     units = sess.run(layer,feed_dict={inputs:stimuli})
     pdb.set_trace()
+    list_to_file()
     # units.reshape([1,units.shape[1]*units.shape[2]*units.shape[3]])
     # plotNNFilter(units)
 
+def plotNNFilter(units):
+    filters = units.shape[3]
+    plt.figure(1, figsize=(20,20))
+    n_columns = 6
+    n_rows = math.ceil(filters / n_columns) + 1
+    for i in range(filters):
+        plt.subplot(n_rows, n_columns, i+1)
+        plt.title('Filter ' + str(i))
+        # plt.plot(units[0,:,:,i])
+        # plt.savefig("hahaha.png")
+        # plt.imshow(units[0,:,:,i],interpolation="nearest", cmap="gray")
+        # plt.savefig("plot_"+str(i)+".png") #, interpolation="nearest", cmap="gray")
+        # plt.clf()
+        plt.hist(units[0,:,:,i])
+    plt.savefig("hist_"+".png") #, interpolation="nearest", cmap="gray")
 
 
 
+def plot_output_layers(stimuli,layers):
+  for key in stimuli:
+    conv,relu,pool = stimuli[key]
+    getActivations(conv,stimuli,key+'_conv')
+    getActivations(relu,stimuli,key+'_relu')
+    getActivations(relu,stimuli,key+'_pool')
 
 #################### building graph  #################################################
 
-convolution_list = {}
-pre_activation_list = {}
-pool = {}
+layer_propertieS = {}
 conv1_out_size = 14 #number of output channel of first convolutional 
 with tf.name_scope('conv-1') as scope:
     pdb.set_trace()
-    kernel = _variable_with_weight_decay('weights',
+    kernel = _variable_with_weight_decay('weights'+scope,
                                          shape=[5, 5, 3, conv1_out_size],
                                          stddev=5e-2,
                                          wd=0.0)
 
-    conv = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME')
+    conv = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME',name="conv_"+scope)
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    biases = tf.Variable(tf.zeros([conv1_out_size]), name='biases_'+scope) 
     pre_activation = tf.nn.bias_add(conv, biases)
     # conv1 = tf.nn.relu(pre_activation)
-    local1 = tf.nn.relu(pre_activation)
+    local1 = tf.nn.relu(pre_activation,name="local_relu_"+scope)
     # pool1
     pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
-
+                         padding='SAME',name="maxpool_"+scope)
+    layer_propertieS[scope]=(conv,local1,pool1)
 with tf.name_scope('conv-2') as scope:
-    kernel2 = _variable_with_weight_decay('weights2',
+    kernel2 = _variable_with_weight_decay('weights2'+scope,
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
                                          wd=0.0)
 
-    conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME')
+    conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME',name="conv_"+scope)
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases2 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    biases2 = tf.Variable(tf.zeros([conv1_out_size]), name='biases_'+scope) 
     pre_activation2 = tf.nn.bias_add(conv2, biases2)
     # conv1 = tf.nn.relu(pre_activation)
-    local2 = tf.nn.relu(pre_activation2)
+    local2 = tf.nn.relu(pre_activation2, name='local_relu_'+scope)
     # pool1
     pool2 = tf.nn.max_pool(local2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
+                         padding='SAME',name="maxpool_"+scope)
+
+    layer_propertieS[scope]=(conv2,local2,pool2)
 with tf.name_scope('conv-3') as scope:
-#    pdb.set_trace()
-    kernel3 = _variable_with_weight_decay('weights3',
+    kernel3 = _variable_with_weight_decay('weights3'+scope,
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
                                          wd=0.0)
 
-    conv3 = tf.nn.conv2d(pool2, kernel3, [1, 1, 1, 1], padding='SAME')
+    conv3 = tf.nn.conv2d(pool2, kernel3, [1, 1, 1, 1], padding='SAME',name="conv_"+scope)
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases3 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    biases3 = tf.Variable(tf.zeros([conv1_out_size]), name='biases_'+scope) 
     pre_activation3 = tf.nn.bias_add(conv3, biases3)
     # conv1 = tf.nn.relu(pre_activation)
-    local3 = tf.nn.relu(pre_activation3)
+    local3 = tf.nn.relu(pre_activation3, name='local_relu_'+scope)
     # pool1
     pool3 = tf.nn.max_pool(local3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
+                         padding='SAME',name="maxpool_"+scope)
+    layer_propertieS[scope]=(conv3,local3,pool3)
+
 with tf.name_scope('conv-4') as scope:
-#    pdb.set_trace()
-    kernel4 = _variable_with_weight_decay('weights4',
+    kernel4 = _variable_with_weight_decay('weights4'+scope,
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
                                          wd=0.0)
 
-    conv4 = tf.nn.conv2d(pool3, kernel4, [1, 1, 1, 1], padding='SAME')
+    conv4 = tf.nn.conv2d(pool3, kernel4, [1, 1, 1, 1], padding='SAME',name="conv_"+scope)
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases4 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    biases4 = tf.Variable(tf.zeros([conv1_out_size]), name='biases_'+scope) 
     pre_activation4 = tf.nn.bias_add(conv4, biases4)
     # conv1 = tf.nn.relu(pre_activation)
-    local4 = tf.nn.relu(pre_activation4)
+    local4 = tf.nn.relu(pre_activation4, name='local_relu_'+scope)
     # pool1
     pool4 = tf.nn.max_pool(local4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
+                         padding='SAME',name="maxpool_"+scope)
+    layer_propertieS[scope]=(conv4,local4,pool4)
+
 with tf.name_scope('conv-5') as scope:
-#    pdb.set_trace()
-    kernel5 = _variable_with_weight_decay('weights5',
+    kernel5 = _variable_with_weight_decay('weights5'+scope,
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
                                          wd=0.0)
 
-    conv5 = tf.nn.conv2d(pool4, kernel5, [1, 1, 1, 1], padding='SAME')
+    conv5 = tf.nn.conv2d(pool4, kernel5, [1, 1, 1, 1], padding='SAME',name="conv_"+scope)
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases5 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    biases5 = tf.Variable(tf.zeros([conv1_out_size]), 'biases', name='biases_'+scope) 
     pre_activation5 = tf.nn.bias_add(conv5, biases5)
     # conv1 = tf.nn.relu(pre_activation)
-    local5 = tf.nn.relu(pre_activation5)
+    local5 = tf.nn.relu(pre_activation5, name='local_relu_'+scope)
     # pool1
     pool5 = tf.nn.max_pool(local5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
+                         padding='SAME',name="maxpool_"+scope)
     
+    layer_propertieS[scope]=(conv5,local5,pool5)
+
 # Move everything into depth so we can perform a single matrix multiply.
 with tf.name_scope('Dense-Relu_Layer') as scope:
     # flattening the input
@@ -205,7 +221,6 @@ with tf.Session() as sess:
                 [train_step, error, accuracy], 
                 feed_dict={inputs: input_batch, targets: target_batch})
             # calculating error and accuracy for batch
-            getActivations(local1,input_batch[0],)
             running_error += batch_error
             running_accuracy += batch_acc
         # averaging the error and accuracy
@@ -215,7 +230,6 @@ with tf.Session() as sess:
               .format(e + 1, running_error, running_accuracy))
         acc_train_list.append(running_accuracy)
         err_train_list.append(running_error)
-
         # validation
         if  (e + 1) % 5 == 0:
             valid_error = 0.
@@ -227,6 +241,8 @@ with tf.Session() as sess:
                     feed_dict={inputs: input_batch, targets: target_batch})
                 valid_error += batch_error
                 valid_accuracy += batch_acc
+                plot_output_layers()
+
             valid_error /= valid_data.num_batches
             valid_accuracy /= valid_data.num_batches
             print('err(valid)={0:.2f} acc(valid)={1:.2f}'
