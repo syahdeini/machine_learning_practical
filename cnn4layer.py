@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pdb
 
 
-experiment_name = "2_layer_conv"
+experiment_name = "5_layer_conv"
 
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
@@ -81,17 +81,65 @@ with tf.name_scope('conv-2') as scope:
     conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases2 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
-    pre_activation = tf.nn.bias_add(conv2, biases2)
+    pre_activation2 = tf.nn.bias_add(conv2, biases2)
     # conv1 = tf.nn.relu(pre_activation)
-    local2 = tf.nn.relu(pre_activation)
+    local2 = tf.nn.relu(pre_activation2)
     # pool1
     pool2 = tf.nn.max_pool(local2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME')
+with tf.name_scope('conv-3') as scope:
+#    pdb.set_trace()
+    kernel3 = _variable_with_weight_decay('weights3',
+                                         shape=[5, 5, conv1_out_size, conv1_out_size],
+                                         stddev=5e-2,
+                                         wd=0.0)
+
+    conv3 = tf.nn.conv2d(pool2, kernel3, [1, 1, 1, 1], padding='SAME')
+    #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
+    biases3 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    pre_activation3 = tf.nn.bias_add(conv3, biases3)
+    # conv1 = tf.nn.relu(pre_activation)
+    local3 = tf.nn.relu(pre_activation3)
+    # pool1
+    pool3 = tf.nn.max_pool(local3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME')
+with tf.name_scope('conv-4') as scope:
+#    pdb.set_trace()
+    kernel4 = _variable_with_weight_decay('weights4',
+                                         shape=[5, 5, conv1_out_size, conv1_out_size],
+                                         stddev=5e-2,
+                                         wd=0.0)
+
+    conv4 = tf.nn.conv2d(pool3, kernel4, [1, 1, 1, 1], padding='SAME')
+    #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
+    biases4 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    pre_activation4 = tf.nn.bias_add(conv4, biases4)
+    # conv1 = tf.nn.relu(pre_activation)
+    local4 = tf.nn.relu(pre_activation4)
+    # pool1
+    pool4 = tf.nn.max_pool(local4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
+                         padding='SAME')
+with tf.name_scope('conv-5') as scope:
+#    pdb.set_trace()
+    kernel5 = _variable_with_weight_decay('weights5',
+                                         shape=[5, 5, conv1_out_size, conv1_out_size],
+                                         stddev=5e-2,
+                                         wd=0.0)
+
+    conv5 = tf.nn.conv2d(pool4, kernel5, [1, 1, 1, 1], padding='SAME')
+    #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
+    biases5 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    pre_activation5 = tf.nn.bias_add(conv5, biases5)
+    # conv1 = tf.nn.relu(pre_activation)
+    local5 = tf.nn.relu(pre_activation5)
+    # pool1
+    pool5 = tf.nn.max_pool(local5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
     
 # Move everything into depth so we can perform a single matrix multiply.
 with tf.name_scope('Dense-Relu_Layer') as scope:
     # flattening the input
-    last_layer = pool2
+    last_layer = pool5
     tot_shape=last_layer.get_shape()[1].value*last_layer.get_shape()[2].value*last_layer.get_shape()[3].value
     reshape = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
     weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
