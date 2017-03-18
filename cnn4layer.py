@@ -13,6 +13,7 @@ import pdb
 
 experiment_name = "5_layer_conv"
 NUM_CLASSES = 10
+BATCH_SIZE = 40
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
 train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
 valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
@@ -86,7 +87,7 @@ with tf.name_scope('conv-1') as scope:
     # pool1
     pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
-  
+
 with tf.name_scope('conv-2') as scope:
     kernel2 = _variable_with_weight_decay('weights2',
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
