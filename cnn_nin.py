@@ -225,7 +225,7 @@ with tf.name_scope('accuracy'):
 
 # use adam optimizer 
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=2.0).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
@@ -244,7 +244,7 @@ with tf.Session() as sess:
             # running sesssion
             #print("shape ",input_batch.shape)
 	    #input_batch = normalize_and_whitening(input_batch)
-            input_batch = tf.map_fn(lambda img: tf.image.per_image_standardization(img), input_batch)
+            #input_batch = tf.map_fn(lambda img: tf.image.per_image_standardization(img), input_batch)
             #count+=1
 	    #print("finish normalizeing")
             _, batch_error, batch_acc = sess.run(
