@@ -49,6 +49,7 @@ def getActivations(layer,stimuli,filename):
     stimuli = stimuli[0].reshape(-1,32,32,3)
     units = sess.run(layer,feed_dict={inputs:stimuli})
     pdb.set_trace()
+    units.reshape(1, units.shape[1]*units.shape[2]*units.shape[3])
     list_to_file(units,filename)
     # units.reshape([1,units.shape[1]*units.shape[2]*units.shape[3]])
     # plotNNFilter(units)
@@ -74,16 +75,15 @@ def plotNNFilter(units):
 def plot_output_layers(stimuli,layers):
   for key in layers:
     conv,relu,pool = layers[key]
-    getActivations(conv,stimuli,key+'_conv')
-    getActivations(relu,stimuli,key+'_relu')
-    getActivations(relu,stimuli,key+'_pool')
+    getActivations(conv,stimuli,key[:-1]+'_conv')
+    getActivations(relu,stimuli,key[:-1]+'_relu')
+    getActivations(relu,stimuli,key[:-1]+'_pool')
 
 #################### building graph  #################################################
 
 layer_propertieS = {}
 conv1_out_size = 14 #number of output channel of first convolutional 
 with tf.name_scope('conv-1') as scope:
-    pdb.set_trace()
     kernel = _variable_with_weight_decay('weights'+scope,
                                          shape=[5, 5, 3, conv1_out_size],
                                          stddev=5e-2,
