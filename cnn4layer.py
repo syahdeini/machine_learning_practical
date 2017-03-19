@@ -29,7 +29,7 @@ def list_to_file(thelist,filename):
 #    thefile = open(filename, 'w')
 #    for item in thelist:
 #      thefile.write("%s\n" % item)
-      cPickle.dump(thelist,open(filename,'wb'))
+      cPickle.dump(thelist,open(filename+".p",'wb'))
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
@@ -49,8 +49,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
 def getActivations(layer,stimuli,filename):
     stimuli = stimuli[0].reshape(-1,32,32,3)
     units = sess.run(layer,feed_dict={inputs:stimuli})
-    pdb.set_trace()
-    units.reshape(1, units.shape[1]*units.shape[2]*units.shape[3])
+    #units.reshape(1, units.shape[1]*units.shape[2]*units.shape[3])
     list_to_file(units,filename)
     # units.reshape([1,units.shape[1]*units.shape[2]*units.shape[3]])
     # plotNNFilter(units)
