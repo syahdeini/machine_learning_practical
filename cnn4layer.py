@@ -5,7 +5,7 @@ import numpy as np
 from mlp.data_providers import CIFAR10DataProvider, CIFAR100DataProvider
 import matplotlib.pyplot as plt
 import pdb
-
+import cPickle
 
 
 ##### CONSTANT #####################################################
@@ -26,9 +26,10 @@ targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
 #################################################################################
 
 def list_to_file(thelist,filename):
-    thefile = open(filename, 'w')
-    for item in thelist:
-      thefile.write("%s\n" % item)
+#    thefile = open(filename, 'w')
+#    for item in thelist:
+#      thefile.write("%s\n" % item)
+      cPickle.dump(thelist,open(filename,'wb'))
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
