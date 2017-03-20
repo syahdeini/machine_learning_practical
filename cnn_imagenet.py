@@ -74,6 +74,17 @@ def resize_img(imgs):
    # Employ the bounding box to distort the image.
    distorted_image = tf.slice(image, begin, size)
 
+def random_aug(image):
+    image = image.rgb_to_grayscale(image)
+    distortions = tf.random_uniform([2], 0, 1.0, dtype=tf.float32)
+    distort_left_right_random = distortions[0]
+    mirror = tf.less(tf.pack([1.0, distort_left_right_random, 1.0]), 0.5)
+    image = tf.reverse(image, mirror)
+    distort_up_down_random = distortions[1]
+    mirror = tf.less(tf.pack([distort_up_down_random, 1.0, 1.0]), 0.5)
+    image = tf.reverse(image, mirror)
+    return image
+    
 with tf.name_scope('conv-1') as scope:
     kernel = _variable_with_weight_decay('weights',
                                          shape=[5, 5, 3, conv1_out_size],
