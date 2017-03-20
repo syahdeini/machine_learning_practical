@@ -25,16 +25,9 @@ def list_to_file(thelist,filename):
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
-  dtype = tf.float32
-  var =  tf.Variable(
-        tf.truncated_normal(
-            shape), 
-        'weights')
-
-  if wd is not None:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-    tf.add_to_collection('losses', weight_decay)
-  return var
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
+	
 
 
 num_hidden = 200
@@ -43,23 +36,26 @@ num_hidden3 = 50
 BATCH_SIZE = 40
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
-train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
 valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
+
+train_data.inputs = train_data.inputs.reshape((-1, 1024, 3), order='F')
+train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
+valid_data.inputs = valid_data.inputs.reshape((-1, 1024, 3), order='F')
 valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
+
 input_dim = 32
 output_dim = 32
 # place holder for input and target
 inputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
 targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
-# pdb.set_trace()
 # building graph
 keep_prob = tf.placeholder("float")
 reguralization_val = 1.5
 conv1_out_size = 14 #number of output channel of first convolutional
 def resize_img(imgs):
-    return tf.image.resize_image(inputs, [-1,16,16,3])
+    return tf.image.resize_images(inputs, [16,16])
 
- def distorted_image(image)
+def distorted_image(image):
    bounding_boxes = [BATCH_SIZE,3,4]
 
    # Generate a single distorted bounding box.
@@ -75,7 +71,7 @@ def resize_img(imgs):
    distorted_image = tf.slice(image, begin, size)
 
 def random_aug(image):
-    image = image.rgb_to_grayscale(image)
+    image = tf.image.rgb_to_grayscale(image)
     distortions = tf.random_uniform([2], 0, 1.0, dtype=tf.float32)
     distort_left_right_random = distortions[0]
     mirror = tf.less(tf.pack([1.0, distort_left_right_random, 1.0]), 0.5)
@@ -86,31 +82,35 @@ def random_aug(image):
     return image
     
 with tf.name_scope('conv-1') as scope:
-    kernel = _variable_with_weight_decay('weights',
-                                         shape=[5, 5, 3, conv1_out_size],
+    filter_size1 = 48
+    kernel = _variable_with_weight_decay('weights_conv1',
+                                         shape=[5, 5, 3, filter_size1],
                                          stddev=5e-2,
-                                         wd=2.5)
-    inputs = resize_img(inpus)
-    tfn = lambda x: tf.image.per_image_standardization(x)
-    inputs = tf.map_fn(fn=tfn, elems = inputs)
-    inputs = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME')
+                                         wd=0.0)
+  #  inp = resize_img(inputs)
+  #  tfn = lambda x: random_aug(x)
+   # inp = tf.map_fn(fn=tfn, elems = inp)
+ #   tfn = lambda x: tf.image.per_image_standardization(x)
+ #   inp = tf.map_fn(fn=random_aug, elems=inputs)
+    inp = inputs
+    conv1 = tf.nn.conv2d(inp, kernel, [1, 1, 1, 1], padding='SAME')    
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
-    pre_activation = tf.nn.bias_add(conv, biases)
+    biases = tf.Variable(tf.zeros([filter_size1]), 'biases1') 
+    pre_activation = tf.nn.bias_add(conv1, biases)
     # conv1 = tf.nn.relu(pre_activation)
     local1 = tf.nn.relu(pre_activation)
     # pool1
     lrn_out = tf.nn.lrn(local1, 5,2,0.0001,0.75)
 with tf.name_scope('conv-2') as scope:
-#    pdb.set_trace()
-    kernel2 = _variable_with_weight_decay('weights2',
-                                         shape=[5, 5, conv1_out_size, conv1_out_size],
+    filter_size2 = 128
+    kernel2 = _variable_with_weight_decay('weights2_conv2',
+                                         shape=[5, 5, filter_size1, filter_size2],
                                          stddev=5e-2,
-                                         wd=2.5)
+                                         wd=0.0)
 
     conv2 = tf.nn.conv2d(lrn_out, kernel2, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases2 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    biases2 = tf.Variable(tf.zeros([filter_size2]), 'biases'+scope) 
     pre_activation2 = tf.nn.bias_add(conv2, biases2)
     # conv1 = tf.nn.relu(pre_activation)
     local2 = tf.nn.relu(pre_activation2)
@@ -124,15 +124,15 @@ with tf.name_scope('dropout') as scope:
     local_dp1 = tf.nn.dropout(pool2, keep_prob)
 
 with tf.name_scope('conv-3') as scope:
-#    pdb.set_trace()
-    kernel3 = _variable_with_weight_decay('weights3',
-                                         shape=[5, 5, conv1_out_size, conv1_out_size],
+    filter_size3 = 192
+    kernel3 = _variable_with_weight_decay('weights3_conv3',
+                                         shape=[5, 5, filter_size2, filter_size3],
                                          stddev=5e-2,
-                                         wd=2.5)
+                                         wd=0.0)
 
     conv3 = tf.nn.conv2d(local_dp1, kernel3, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases3 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
+    biases3 = tf.Variable(tf.zeros([filter_size3]), 'biases'+scope) 
     pre_activation3 = tf.nn.bias_add(conv3, biases3)
     # conv1 = tf.nn.relu(pre_activation)
     local3 = tf.nn.relu(pre_activation3)
@@ -140,16 +140,16 @@ with tf.name_scope('conv-3') as scope:
 
 
 with tf.name_scope('conv-4') as scope:
-#    pdb.set_trace()
-    kernel4 = _variable_with_weight_decay('weights4',
-                                         shape=[5, 5, conv1_out_size, conv1_out_size],
+    filter_size4 = 192
+    kernel4 = _variable_with_weight_decay('weights4_conv4',
+                                         shape=[5, 5, filter_size3, filter_size4],
                                          stddev=5e-2,
-                                         wd=2.5)
+                                         wd=0.0)
 
     conv4 = tf.nn.conv2d(local3, kernel4, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases4 = tf.Variable(tf.zeros([conv1_out_size]), 'biases')
-    pre_activation3 = tf.nn.bias_add(conv, biases4)
+    biases4 = tf.Variable(tf.zeros([filter_size4]), 'biases'+scope)
+    pre_activation3 = tf.nn.bias_add(conv4, biases4)
     # conv1 = tf.nn.relu(pre_activation)
     local4 = tf.nn.relu(pre_activation3)
     # pool1
@@ -163,27 +163,26 @@ with tf.name_scope('Dense-Relu_Layer') as scope:
     last_layer = pool4
     tot_shape=last_layer.get_shape()[1].value*last_layer.get_shape()[2].value*last_layer.get_shape()[3].value
     reshape = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
-    weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
-    biases = tf.Variable(tf.zeros([tot_shape]), 'biases') 
+    weights = _variable_with_weight_decay('weightsdemse', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
+    biases = tf.Variable(tf.zeros([tot_shape]), 'biases'+scope) 
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases)
 
 
 with tf.variable_scope('softmax_linear') as scope:
-    weights = _variable_with_weight_decay('weights5', [tot_shape, NUM_CLASSES],
+    weights = _variable_with_weight_decay('weightsSL', [tot_shape, NUM_CLASSES],
                                           stddev=1.0, wd=0.0)
-    biases = tf.Variable(tf.zeros([NUM_CLASSES]), 'biases') 
-    softmax_linear = tf.add(tf.matmul(local3, weights), biases)
-    soft_max_out = tf.nn.softmax(softmax_linear)
-
+    biases = tf.Variable(tf.zeros([NUM_CLASSES]), 'biases'+str(scope)) 
+    #softmax_linear = tf.add(tf.matmul(local3, weights), biases)
+#    soft_max_out = tf.nn.softmax(softmax_linear)
+    softmax_linear = tf.matmul(local3, weights) +  biases
 with tf.name_scope('error'):
-    out_login = tf.nn.softmax_cross_entropy_with_logits(logits = softmax_linear, labels=targets)
+    out_login = tf.nn.softmax_cross_entropy_with_logits(softmax_linear, targets)
     error = tf.reduce_mean(out_login)
 
 # use softmax for accuracy
 with tf.name_scope('accuracy'):
     accuracy = tf.reduce_mean(tf.cast(
-            tf.equal(tf.argmax(soft_max_out, 1), tf.argmax(targets, 1)), 
-            tf.float32))
+            tf.equal(tf.argmax(softmax_linear, 1), tf.argmax(targets, 1)), tf.float32))
 
 # use adam optimizer 
 with tf.name_scope('train'):
@@ -203,14 +202,14 @@ with tf.Session() as sess:
         running_accuracy = 0.
         for input_batch, target_batch in train_data:            
             # running sesssion
-            _, batch_error, batch_acc = sess.run(
+            _,batch_error, batch_acc = sess.run(
                 [train_step, error, accuracy], 
-                feed_dict={inputs: input_batch, targets: target_batch,keep_prob:0.5})
+                feed_dict={inputs: input_batch, targets: target_batch, keep_prob:0.5})
             # calculating error and accuracy for batch
             running_error += batch_error
             running_accuracy += batch_acc
         # averaging the error and accuracy
-        running_error /= train_data.num_batches
+	running_error /= train_data.num_batches
         running_accuracy /= train_data.num_batches
         print('End of epoch {0:02d}: err(train)={1:.2f} acc(train)={2:.2f}'
               .format(e + 1, running_error, running_accuracy))
