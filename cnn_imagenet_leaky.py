@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pdb
 
 
-experiment_name = "delete_max_pool_4_layer_conv"
+experiment_name = "imagenet_leaky"
 
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
@@ -25,16 +25,17 @@ def list_to_file(thelist,filename):
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
-  dtype = tf.float32
-  var =  tf.Variable(
-        tf.truncated_normal(
-            shape), 
-        'weights')
+#  dtype = tf.float32
+#  var =  tf.Variable(
+ #       tf.truncated_normal(
+  #          shape))
 
-  if wd is not None:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-    tf.add_to_collection('losses', weight_decay)
-  return var
+ # if wd > 0:
+  #  weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
+  #  tf.add_to_collection('losses', weight_decay)
+ # return var
+  initial = tf.truncated_normal(shape, stddev=0.1)
+  return tf.Variable(initial)
 
 
 num_hidden = 200
@@ -43,9 +44,13 @@ num_hidden3 = 50
 BATCH_SIZE = 40
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
-train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
 valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
+train_data.inputs = train_data.inputs.reshape((-1, 1024, 3), order='F')
+train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
+valid_data.inputs = valid_data.inputs.reshape((-1, 1024, 3), order='F')
 valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
+
+
 input_dim = 32
 output_dim = 32
 # place holder for input and target
@@ -85,7 +90,7 @@ def random_aug(image):
     image = tf.reverse(image, mirror)
     return image
 
-alpha = 5.5    
+alpha = float(1)/100   
 with tf.name_scope('conv-1') as scope:
     filter_size1 = 48
     kernel = _variable_with_weight_decay('weights',
@@ -105,7 +110,7 @@ with tf.name_scope('conv-1') as scope:
     pre_activation = tf.nn.bias_add(conv1, biases)
     # conv1 = tf.nn.relu(pre_activation)
     #local1 = tf.nn.relu(pre_activation)
-    local1 = tf.max(alpha*pre_activation,pre_activation)
+    local1 = tf.maximum(alpha*pre_activation,pre_activation)
     
     # pool1
     lrn_out = tf.nn.lrn(local1, 5,2,0.0001,0.75)
@@ -124,7 +129,7 @@ with tf.name_scope('conv-2') as scope:
     # conv1 = tf.nn.relu(pre_activation)
    # local2 = tf.nn.relu(pre_activation2)
     # pool1
-    local2 = tf.max(alpha*pre_activation2,pre_activation2)
+    local2 = tf.maximum(alpha*pre_activation2,pre_activation2)
 
     pool2 = tf.nn.max_pool(local2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
@@ -150,7 +155,7 @@ with tf.name_scope('conv-3') as scope:
     #local3 = tf.nn.relu(pre_activation3)
     # pool1
 
-    local3 = tf.max(alpha*pre_activation3,pre_activation3)
+    local3 = tf.maximum(alpha*pre_activation3,pre_activation3)
 
 with tf.name_scope('conv-4') as scope:
 #    pdb.set_trace()
@@ -163,11 +168,11 @@ with tf.name_scope('conv-4') as scope:
     conv4 = tf.nn.conv2d(local3, kernel4, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases4 = tf.Variable(tf.zeros([filter_size4]), 'biases')
-    pre_activation3 = tf.nn.bias_add(conv4, biases4)
+    pre_activation4 = tf.nn.bias_add(conv4, biases4)
     # conv1 = tf.nn.relu(pre_activation)
    # local4 = tf.nn.relu(pre_activation3)
     # pool1
-    local4 = tf.max(alpha*pre_activation4,pre_activation4)
+    local4 = tf.maximum(alpha*pre_activation4,pre_activation4)
 
     pool4 = tf.nn.max_pool(local4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
@@ -198,12 +203,12 @@ with tf.name_scope('error'):
 # use softmax for accuracy
 with tf.name_scope('accuracy'):
     accuracy = tf.reduce_mean(tf.cast(
-            tf.equal(tf.argmax(soft_max_out, 1), tf.argmax(targets, 1)), 
+            tf.equal(tf.argmax(softmax_linear, 1), tf.argmax(targets, 1)), 
             tf.float32))
 
 # use adam optimizer 
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=0.00001).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
