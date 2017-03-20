@@ -25,19 +25,9 @@ def list_to_file(thelist,filename):
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
-  dtype = tf.float32
-  var =  tf.Variable(
-        tf.truncated_normal(
-            shape), 
-        'weights')
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
 
-  if wd is not None:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-    tf.add_to_collection('losses', weight_decay)
-  return var
-
-
-num_hidden = 200
 num_hidden2 = 100
 num_hidden3 = 50
 BATCH_SIZE = 40
@@ -117,12 +107,12 @@ with tf.name_scope('error'):
 # use softmax for accuracy
 with tf.name_scope('accuracy'):
     accuracy = tf.reduce_mean(tf.cast(
-            tf.equal(tf.argmax(soft_max_out, 1), tf.argmax(targets, 1)), 
+            tf.equal(tf.argmax(softmax_linear, 1), tf.argmax(targets, 1)), 
             tf.float32))
 
 # use adam optimizer 
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=0.001).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
