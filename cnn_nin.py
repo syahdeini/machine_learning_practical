@@ -25,16 +25,8 @@ def list_to_file(thelist,filename):
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
-  dtype = tf.float32
-  var =  tf.Variable(
-        tf.truncated_normal(
-            shape), 
-        'weights')
-
-  if wd is not None:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-    tf.add_to_collection('losses', weight_decay)
-  return var
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
 
 
 def normalize_and_whitening(imgs):
@@ -49,9 +41,15 @@ num_hidden3 = 50
 BATCH_SIZE = 100
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
-train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
 valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
+
+#train_data_10 = CIFAR10DataProvider('train', batch_size=50)
+train_data.inputs = train_data.inputs.reshape((-1, 1024, 3), order='F')
+train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
+valid_data.inputs = valid_data.inputs.reshape((-1, 1024, 3), order='F')
 valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
+
+
 input_dim = 32
 output_dim = 32
 # place holder for input and target
@@ -68,7 +66,7 @@ with tf.name_scope('conv-1') as scope:
                                          stddev=5e-2,
                                          wd=0.0)
 #    inputs = tf.image.per_image_standardization(inputs) # put contrast normalization
-#    inputs = tf.image.per_image_whitening(inputs)
+    inputs = tf.image.per_image_whitening(inputs)
 #    inputs = tf.map_fn(lambda img: tf.image.per_image_standardization(tf.image.rgb_to_hsv(img)), inputs,dtype = tf.float32)
  #   pdb.set_trace()
     conv1 = tf.nn.conv2d(inputs, kernel1, [1, 1, 1, 1], padding='SAME')
@@ -112,7 +110,7 @@ with tf.name_scope('dropout_conv1') as scope:
     dropout1 = tf.nn.dropout(pool1,keep_prob=0.5, name="dropout1") 
 
 #CONV2
-"""with tf.name_scope('conv-2') as scope:
+with tf.name_scope('conv-2') as scope:
     kernel2 = _variable_with_weight_decay('weights',
                                          shape=[5, 5, 96, 192],
                                          stddev=5e-2,
@@ -157,14 +155,14 @@ with tf.name_scope('avg_pool_conv2') as scope:
                          padding='SAME')
 with tf.name_scope('dropout_conv2') as scope:
     dropout2 = tf.nn.dropout(pool2,keep_prob=0.5,name="dropout2") 
-"""
+
 with tf.name_scope('conv-3') as scope:
     kernel3 = _variable_with_weight_decay('weights',
-                                         shape=[3, 3, 96, 192],
+                                         shape=[3, 3, 192, 192],
                                          stddev=5e-2,
                                          wd=0.0)
 
-    conv3 = tf.nn.conv2d(dropout1, kernel3, [1, 1, 1, 1], padding='SAME')
+    conv3 = tf.nn.conv2d(dropout2, kernel3, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases3 = tf.Variable(tf.zeros([192]), 'biases') 
     pre_activation3 = tf.nn.bias_add(conv3, biases3)
@@ -220,7 +218,7 @@ with tf.name_scope('error'):
 # use softmax for accuracy
 with tf.name_scope('accuracy'):
     accuracy = tf.reduce_mean(tf.cast(
-            tf.equal(tf.argmax(soft_max_out, 1), tf.argmax(targets, 1)), 
+            tf.equal(tf.argmax(softmax_linear, 1), tf.argmax(targets, 1)), 
             tf.float32))
 
 # use adam optimizer 
