@@ -43,9 +43,13 @@ num_hidden3 = 50
 BATCH_SIZE = 40
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
-train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
 valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
+train_data.inputs = train_data.inputs.reshape((-1, 1024, 3), order='F')
+train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
+valid_data.inputs = valid_data.inputs.reshape((-1, 1024, 3), order='F')
 valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
+
+
 input_dim = 32
 output_dim = 32
 # place holder for input and target
@@ -129,7 +133,7 @@ with tf.name_scope('error'):
 # use softmax for accuracy
 with tf.name_scope('accuracy'):
     accuracy = tf.reduce_mean(tf.cast(
-            tf.equal(tf.argmax(soft_max_out, 1), tf.argmax(targets, 1)), 
+            tf.equal(tf.argmax(softmax_linear, 1), tf.argmax(targets, 1)), 
             tf.float32))
 
 # use adam optimizer 

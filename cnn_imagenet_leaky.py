@@ -25,10 +25,11 @@ def list_to_file(thelist,filename):
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
-#  dtype = tf.float32
-#  var =  tf.Variable(
- #       tf.truncated_normal(
-  #          shape))
+  dtype = tf.float32
+  var =  tf.Variable(
+        tf.truncated_normal(
+            shape,stddev=.01,mean=0), 
+        'weights')
 
  # if wd > 0:
   #  weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
@@ -188,12 +189,20 @@ with tf.name_scope('Dense-Relu_Layer') as scope:
     biases = tf.Variable(tf.zeros([tot_shape]), 'biases') 
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases)
 
+with tf.name_scope('Dense-Relu_Layer_2') as scope:
+    # flattening the input
+    last_layer = pool3
+#    reshape_dl2 = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
+    weights_dl2 = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
+    biases_dl2 = tf.Variable(tf.zeros([tot_shape]), 'biases') 
+    local_dl2 = tf.nn.relu(tf.matmul(last_layer, weights_dl2) + biases_dl2)
+
 
 with tf.variable_scope('softmax_linear') as scope:
     weights = _variable_with_weight_decay('weights5', [tot_shape, NUM_CLASSES],
                                           stddev=1.0, wd=0.0)
     biases = tf.Variable(tf.zeros([NUM_CLASSES]), 'biases') 
-    softmax_linear = tf.add(tf.matmul(local3, weights), biases)
+    softmax_linear = tf.add(tf.matmul(local_dl2, weights), biases)
     soft_max_out = tf.nn.softmax(softmax_linear)
 
 with tf.name_scope('error'):
