@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pdb
 
 
-experiment_name = "3_layer_conv"
+experiment_name = "delete_max_pool_4_layer_conv"
 
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
@@ -31,7 +31,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
             shape), 
         'weights')
 
-  if wd > 0:
+  if wd is not None:
     weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
     tf.add_to_collection('losses', weight_decay)
   return var
@@ -57,13 +57,14 @@ inputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_dat
 targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
 # pdb.set_trace()
 # building graph
-
+keep_prob = tf.placeholder("float")
+reguralization_val = 1.5
 conv1_out_size = 14 #number of output channel of first convolutional 
 with tf.name_scope('conv-1') as scope:
     kernel = _variable_with_weight_decay('weights',
                                          shape=[5, 5, 3, conv1_out_size],
                                          stddev=5e-2,
-                                         wd=0.0)
+                                         wd=2.5)
 
     conv = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -72,17 +73,15 @@ with tf.name_scope('conv-1') as scope:
     # conv1 = tf.nn.relu(pre_activation)
     local1 = tf.nn.relu(pre_activation)
     # pool1
-    pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
 
 with tf.name_scope('conv-2') as scope:
 #    pdb.set_trace()
     kernel2 = _variable_with_weight_decay('weights2',
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
-                                         wd=0.0)
+                                         wd=2.5)
 
-    conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME')
+    conv2 = tf.nn.conv2d(local1, kernel2, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases2 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
     pre_activation2 = tf.nn.bias_add(conv2, biases2)
@@ -91,40 +90,46 @@ with tf.name_scope('conv-2') as scope:
     # pool1
     pool2 = tf.nn.max_pool(local2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
+with tf.name_scope('dropout') as scope:
+#    pool2 = tf.reshape(pool2,[BATCH_SIZE,])
+ #   weights_dp1 = _variable_with_weight_decay('weights_dp1', shape=[-1,],stddev=1.0, wd=0.0)
+  #  biases_dp1 = tf.Variable(tf.zeros([conv1_out_size]), 'biases_dp1') 
+    local_dp1 = tf.nn.dropout(pool2, keep_prob)
+
 with tf.name_scope('conv-3') as scope:
 #    pdb.set_trace()
     kernel3 = _variable_with_weight_decay('weights3',
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
-                                         wd=0.0)
+                                         wd=2.5)
 
-    conv3 = tf.nn.conv2d(pool2, kernel3, [1, 1, 1, 1], padding='SAME')
+    conv3 = tf.nn.conv2d(local_dp1, kernel3, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases3 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
     pre_activation3 = tf.nn.bias_add(conv3, biases3)
     # conv1 = tf.nn.relu(pre_activation)
     local3 = tf.nn.relu(pre_activation3)
     # pool1
-    pool3 = tf.nn.max_pool(local3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
-    
+
+
 with tf.name_scope('conv-4') as scope:
 #    pdb.set_trace()
-    kernel4 = _variable_with_weight_decay('weights3',
+    kernel4 = _variable_with_weight_decay('weights4',
                                          shape=[5, 5, conv1_out_size, conv1_out_size],
                                          stddev=5e-2,
-                                         wd=0.0)
+                                         wd=2.5)
 
-    conv4 = tf.nn.conv2d(pool3, kernel4, [1, 1, 1, 1], padding='SAME')
+    conv4 = tf.nn.conv2d(local3, kernel4, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases4 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
-    pre_activation4 = tf.nn.bias_add(conv4, biases4)
+    biases4 = tf.Variable(tf.zeros([conv1_out_size]), 'biases')
+    pre_activation3 = tf.nn.bias_add(conv, biases4)
     # conv1 = tf.nn.relu(pre_activation)
-    local4 = tf.nn.relu(pre_activation4)
+    local4 = tf.nn.relu(pre_activation3)
     # pool1
     pool4 = tf.nn.max_pool(local4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
- 
+
+  
 # Move everything into depth so we can perform a single matrix multiply.
 with tf.name_scope('Dense-Relu_Layer') as scope:
     # flattening the input
@@ -150,12 +155,12 @@ with tf.name_scope('error'):
 # use softmax for accuracy
 with tf.name_scope('accuracy'):
     accuracy = tf.reduce_mean(tf.cast(
-            tf.equal(tf.argmax(softmax_linear, 1), tf.argmax(targets, 1)), 
+            tf.equal(tf.argmax(soft_max_out, 1), tf.argmax(targets, 1)), 
             tf.float32))
 
 # use adam optimizer 
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=0.001).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
@@ -173,7 +178,7 @@ with tf.Session() as sess:
             # running sesssion
             _, batch_error, batch_acc = sess.run(
                 [train_step, error, accuracy], 
-                feed_dict={inputs: input_batch, targets: target_batch})
+                feed_dict={inputs: input_batch, targets: target_batch,keep_prob:0.5})
             # calculating error and accuracy for batch
             running_error += batch_error
             running_accuracy += batch_acc
@@ -193,7 +198,7 @@ with tf.Session() as sess:
                 #input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
                 batch_error, batch_acc = sess.run(
                     [error, accuracy], 
-                    feed_dict={inputs: input_batch, targets: target_batch})
+                    feed_dict={inputs: input_batch, targets: target_batch,keep_prob:1.0})
                 valid_error += batch_error
                 valid_accuracy += batch_acc
             valid_error /= valid_data.num_batches
