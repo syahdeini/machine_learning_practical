@@ -34,30 +34,19 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
   Returns:
     Variable Tensor
   """
-  dtype = tf.float32
-  var =  tf.Variable(
-        tf.truncated_normal(
-            shape), 
-        name)
-
-  if wd > 0:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-    tf.add_to_collection('losses', weight_decay)
-    pdb.set_trace()
-  return var
+  initial = tf.truncated_normal(shape, stddev=0.1)
+  return tf.Variable(initial)
 
 
-num_hidden = 200
-num_hidden2 = 100
-num_hidden3 = 50
 BATCH_SIZE = 100
 NUM_CLASSES = 10
 train_data = CIFAR10DataProvider('train', batch_size=BATCH_SIZE)
-train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
 valid_data = CIFAR10DataProvider('valid', batch_size=BATCH_SIZE)
+train_data.inputs = train_data.inputs.reshape((-1, 1024, 3), order='F')
+train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
+valid_data.inputs = valid_data.inputs.reshape((-1, 1024, 3), order='F')
 valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
-input_dim = 32
-output_dim = 32
+
 # place holder for input and target
 inputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
 targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
@@ -111,12 +100,6 @@ with tf.name_scope('normalReluLayer') as scope:
 
 with tf.name_scope('normalReluLayer2') as scope:
     in_dim = 120
-    # Move everything into depth so we can perform a single matrix multiply.
-#    shape_pool2 = local5.get_shape().as_list()
-#    out_dim = shape_pool[1]*shape_pool[2]*shape_pool[3]
-##    pdb.set_trace()
-#    reshape = tf.reshape(pool4, [BATCH_SIZE,out_dim])
-   # dim = reshape.get_shape()[1].value
     weightsN2 = _variable_with_weight_decay('weights3', shape=[in_dim,84],
                                           stddev=0.04, wd=0.0)
     biasesN2 = tf.Variable(tf.zeros([84]), 'biases') 
@@ -124,24 +107,10 @@ with tf.name_scope('normalReluLayer2') as scope:
 
 with tf.name_scope('normalReluLayer2') as scope:
     in_dim = 84
-    # Move everything into depth so we can perform a single matrix multiply.
-#    shape_pool2 = local5.get_shape().as_list()
-#    out_dim = shape_pool[1]*shape_pool[2]*shape_pool[3]
-##    pdb.set_trace()
-#    reshape = tf.reshape(pool4, [BATCH_SIZE,out_dim])
-   # dim = reshape.get_shape()[1].value
     weightsN3 = _variable_with_weight_decay('weights3', shape=[in_dim,10],
                                           stddev=0.04, wd=0.0)
     biasesN3 = tf.Variable(tf.zeros([10]), 'biases') 
     localN3 = tf.nn.relu(tf.matmul(localN2, weightsN3) + biasesN3)
-
-
-# with tf.variable_scope('normalReluLaye') as scope:
-#     weights = _variable_with_weight_decay('weights4', shape=[384, 192],
-#                                           stddev=0.04, wd=0.004)
-#     # biases = _variable_on_cpu('biases4', [192], tf.constant_initializer(0.1))
-#     biases = tf.Variable(tf.zeros([output_dim]), 'biases') 
-#     local4 = tf.nn.relu(tf.matmul(local3, weights) + biases)
 
 with tf.variable_scope('softmax_linear') as scope:
     out_dim = 10
@@ -161,11 +130,11 @@ with tf.name_scope('error'):
 
 with tf.name_scope('accuracy'):
     accuracy = tf.reduce_mean(tf.cast(
-            tf.equal(tf.argmax(soft_max_out, 1), tf.argmax(targets, 1)), 
+            tf.equal(tf.argmax(softmax_linear, 1), tf.argmax(targets, 1)), 
             tf.float32))
     
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
