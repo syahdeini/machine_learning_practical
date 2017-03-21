@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pdb
 
 
-experiment_name = "imagenet_leaky"
+experiment_name = "imagenet_leaky_without_imagepre"
 
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
@@ -25,11 +25,6 @@ def list_to_file(thelist,filename):
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
-  dtype = tf.float32
-  var =  tf.Variable(
-        tf.truncated_normal(
-            shape,stddev=.01,mean=0), 
-        'weights')
 
  # if wd > 0:
   #  weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
@@ -135,9 +130,6 @@ with tf.name_scope('conv-2') as scope:
     pool2 = tf.nn.max_pool(local2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
 with tf.name_scope('dropout') as scope:
-#    pool2 = tf.reshape(pool2,[BATCH_SIZE,])
- #   weights_dp1 = _variable_with_weight_decay('weights_dp1', shape=[-1,],stddev=1.0, wd=0.0)
-  #  biases_dp1 = tf.Variable(tf.zeros([conv1_out_size]), 'biases_dp1') 
     local_dp1 = tf.nn.dropout(pool2, keep_prob)
 
 with tf.name_scope('conv-3') as scope:
@@ -170,19 +162,19 @@ with tf.name_scope('conv-4') as scope:
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
     biases4 = tf.Variable(tf.zeros([filter_size4]), 'biases')
     pre_activation4 = tf.nn.bias_add(conv4, biases4)
-    # conv1 = tf.nn.relu(pre_activation)
-   # local4 = tf.nn.relu(pre_activation3)
-    # pool1
     local4 = tf.maximum(alpha*pre_activation4,pre_activation4)
 
     pool4 = tf.nn.max_pool(local4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
 
-  
+with tf.name_scope('dropout2') as scope:
+    local_dp2 = tf.nn.dropout(pool4, keep_prob)
+
+ 
 # Move everything into depth so we can perform a single matrix multiply.
 with tf.name_scope('Dense-Relu_Layer') as scope:
     # flattening the input
-    last_layer = pool4
+    last_layer = local_dp2
     tot_shape=last_layer.get_shape()[1].value*last_layer.get_shape()[2].value*last_layer.get_shape()[3].value
     reshape = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
     weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
@@ -191,7 +183,7 @@ with tf.name_scope('Dense-Relu_Layer') as scope:
 
 with tf.name_scope('Dense-Relu_Layer_2') as scope:
     # flattening the input
-    last_layer = pool3
+    last_layer = local3
 #    reshape_dl2 = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
     weights_dl2 = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
     biases_dl2 = tf.Variable(tf.zeros([tot_shape]), 'biases') 
@@ -217,7 +209,7 @@ with tf.name_scope('accuracy'):
 
 # use adam optimizer 
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
