@@ -34,17 +34,8 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
   Returns:
     Variable Tensor
   """
-  dtype = tf.float32
-  var =  tf.Variable(
-        tf.truncated_normal(
-            shape,stddev=stddev), 
-        name)
-
-  if wd > 0:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-    tf.add_to_collection('losses', weight_decay)
-    pdb.set_trace()
-  return var
+  initial = tf.truncated_normal(shape, stddev=0.1)
+  return tf.Variable(initial)
 
 
 BATCH_SIZE = 100
@@ -143,7 +134,7 @@ with tf.name_scope('accuracy'):
             tf.float32))
     
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
