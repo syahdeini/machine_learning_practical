@@ -24,8 +24,8 @@ def list_to_file(thelist,filename):
       thefile.write("%s\n" % item)
 
 
-def _variable_with_weight_decay(shape, mean,stddev):
-    initial = tf.truncated_normal(shape = shape, mean =mean, stddev=stddev)
+def _variable_with_weight_decay(_shape, _mean,_stddev):
+    initial = tf.truncated_normal(shape = _shape, mean=_mean, stddev=_stddev)
     return tf.Variable(initial)
 
 num_hidden2 = 100
@@ -54,9 +54,9 @@ lrate = tf.placeholder("float")
 conv1_out_size = 14 #number of output channel of first convolutional 
 with tf.name_scope('conv-1') as scope:
     kernel = _variable_with_weight_decay(
-                                         shape=[5, 5, 3, conv1_out_size],
-                                         stddev=stddev,
-                                         mean=mean)
+                                         [5, 5, 3, conv1_out_size],
+                                         stddev,
+                                         mean)
 
     conv = tf.nn.conv2d(inputs, kernel, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -71,9 +71,9 @@ with tf.name_scope('conv-1') as scope:
 with tf.name_scope('conv-2') as scope:
 #    pdb.set_trace()
     kernel2 = _variable_with_weight_decay(
-                                         shape=[5, 5, conv1_out_size, conv1_out_size],
-                                         stddev=stddev,
-                                         mean=mean)
+                                         [5, 5, conv1_out_size, conv1_out_size],
+                                         stddev,
+                                         mean)
 
     conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -91,7 +91,7 @@ with tf.name_scope('Dense-Relu_Layer') as scope:
     last_layer = pool2
     tot_shape=last_layer.get_shape()[1].value*last_layer.get_shape()[2].value*last_layer.get_shape()[3].value
     reshape = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
-    weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=sttdev, mean=mean)
+    weights = _variable_with_weight_decay([tot_shape, tot_shape],sttdev,mean)
     biases = tf.Variable(tf.zeros([tot_shape]), 'biases') 
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases)
 
@@ -149,7 +149,7 @@ for _lr in slr:
                     #print("finish normalizeing")
                         _, batch_error, batch_acc = sess.run(
                             [train_step, error, accuracy], 
-                            feed_dict={inputs: input_batch, targets: target_batch,mean=_mean,stddev=_std,lrate=_lr})
+                          feed_dict={inputs: input_batch, targets: target_batch,mean:_mean,stddev:_std,lrate:_lr})
                         # calculating error and accuracy for batch
                         running_error += batch_error
                         running_accuracy += batch_acc
@@ -172,7 +172,7 @@ for _lr in slr:
                             #input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
                             batch_error, batch_acc = sess.run(
                                 [error, accuracy], 
-                                feed_dict={inputs: input_batch, targets: target_batch,mean=_mean,stddev=_std,lrate=_lr})
+                                feed_dict={inputs: input_batch, targets: target_batch,mean:_mean,stddev:_std,lrate:_lr})
                             valid_error += batch_error
                             valid_accuracy += batch_acc
                         valid_error /= valid_data.num_batches
