@@ -25,16 +25,8 @@ def list_to_file(thelist,filename):
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
-  dtype = tf.float32
-  var =  tf.Variable(
-        tf.truncated_normal(
-            shape), 
-        'weights')
-
-  if wd > 0:
-    weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-    tf.add_to_collection('losses', weight_decay)
-  return var
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
 
 
 num_hidden = 200
@@ -172,7 +164,7 @@ with tf.name_scope('accuracy'):
 
 # use adam optimizer 
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=0.001).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
