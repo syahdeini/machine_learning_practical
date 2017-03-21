@@ -91,7 +91,7 @@ with tf.name_scope('Dense-Relu_Layer') as scope:
     last_layer = pool2
     tot_shape=last_layer.get_shape()[1].value*last_layer.get_shape()[2].value*last_layer.get_shape()[3].value
     reshape = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
-    weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
+    weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=sttdev, mean=mean)
     biases = tf.Variable(tf.zeros([tot_shape]), 'biases') 
     local3 = tf.nn.relu(tf.matmul(reshape, weights) + biases)
 
@@ -121,12 +121,68 @@ init = tf.global_variables_initializer()
 # begin training
 
 
-slr = np.linspace(0.0001,0.005,3)
-smean = np.linspace(0,0.5,3)
-sstd = np.linspace(0.1,1.0,3)
-
+slr = np.linspace(0.0001,0.005,2)
+smean = np.linspace(0,0.5,2)
+sstd = np.linspace(0.1,1.0,2)
 
 for _lr in slr:
     for _mean in smean:
-        for _std in sstd: 
-  
+        for _std in sstd:
+
+
+            acc_train_list = []
+            err_train_list = []
+            acc_valids = []
+            err_valids = []
+            with tf.Session() as sess:
+                sess.run(init)
+                for e in range(120):
+                    running_error = 0.
+                    running_accuracy = 0.
+                    count=0
+                    for input_batch, target_batch in train_data:            
+                        # running sesssion
+                        #print("shape ",input_batch.shape)
+                    #input_batch = normalize_and_whitening(input_batch)
+                        #input_batch = tf.map_fn(lambda img: tf.image.per_image_standardization(img), input_batch)
+                        #count+=1
+                    #print("finish normalizeing")
+                        _, batch_error, batch_acc = sess.run(
+                            [train_step, error, accuracy], 
+                            feed_dict={inputs: input_batch, targets: target_batch,mean=_mean,stddev=_std,lrate=_lr})
+                        # calculating error and accuracy for batch
+                        running_error += batch_error
+                        running_accuracy += batch_acc
+                    #print("count"+str(count))
+                   
+                    # averaging the error and accuracy
+                    print("calculating error")
+                    running_error /= train_data.num_batches
+                    running_accuracy /= train_data.num_batches
+                    print('End of epoch {0:02d}: err(train)={1:.2f} acc(train)={2:.2f}'
+                          .format(e + 1, running_error, running_accuracy))
+                    acc_train_list.append(running_accuracy)
+                    err_train_list.append(running_error)
+
+                    # validation
+                    if  (e + 1) % 5 == 0:
+                        valid_error = 0.
+                        valid_accuracy = 0.
+                        for input_batch, target_batch in valid_data:
+                            #input_batch=tf.reshape(input_batch,[BATCH_SIZE,32,32,3])
+                            batch_error, batch_acc = sess.run(
+                                [error, accuracy], 
+                                feed_dict={inputs: input_batch, targets: target_batch,mean=_mean,stddev=_std,lrate=_lr})
+                            valid_error += batch_error
+                            valid_accuracy += batch_acc
+                        valid_error /= valid_data.num_batches
+                        valid_accuracy /= valid_data.num_batches
+                        print('                 err(valid)={0:.2f} acc(valid)={1:.2f}'
+                               .format(valid_error, valid_accuracy))
+                        acc_valids.append(valid_accuracy)
+                        err_valids.append(valid_error)
+
+            list_to_file(err_train_list,"res_"+"_"+str(_mean)+"_"+str(_std)+"_"+str(_lr)+"_"+experiment_name+"_error_trains_model9.txt")
+            list_to_file(acc_train_list,"res_"+"_"+str(_mean)+"_"+str(_std)+"_"+str(_lr)+"_"+experiment_name+"_acc_trains_model9.txt")
+            list_to_file(err_valids,"res_"+"_"+str(_mean)+"_"+str(_std)+"_"+str(_lr)+"_"+experiment_name+"error_valid_model9.txt")
+            list_to_file(acc_valids,"res_"+"_"+str(_mean)+"_"+str(_std)+"_"+str(_lr)+"_"+experiment_name+"acc_valid_model9.txt")
