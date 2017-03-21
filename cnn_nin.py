@@ -48,17 +48,17 @@ train_data.inputs = train_data.inputs.reshape((-1, 1024, 3), order='F')
 train_data.inputs = train_data.inputs.reshape((-1, 32, 32, 3))
 valid_data.inputs = valid_data.inputs.reshape((-1, 1024, 3), order='F')
 valid_data.inputs = valid_data.inputs.reshape((-1, 32, 32, 3))
-
+keep_prob = tf.placeholder("float")
 
 input_dim = 32
 output_dim = 32
 # place holder for input and target
 inputs = tf.placeholder(tf.float32, [None, train_data.inputs.shape[1], train_data.inputs.shape[2], train_data.inputs.shape[3]], 'inputs')
 targets = tf.placeholder(tf.float32, [None, train_data.num_classes], 'targets')
+keep_prob
 # pdb.set_trace()
 # building graph
 
-conv1_out_size = 14 #number of output channel of first convolutional 
 #CONV1
 with tf.name_scope('conv-1') as scope:
     kernel1 = _variable_with_weight_decay('weights',
@@ -66,8 +66,8 @@ with tf.name_scope('conv-1') as scope:
                                          stddev=5e-2,
                                          wd=0.0)
 #    inputs = tf.image.per_image_standardization(inputs) # put contrast normalization
-    inputs = tf.image.per_image_whitening(inputs)
-#    inputs = tf.map_fn(lambda img: tf.image.per_image_standardization(tf.image.rgb_to_hsv(img)), inputs,dtype = tf.float32)
+#    inputs = tf.image.per_image_whitening(inputs)
+#    inputs = tf.map_fn(lambda img: tf.image.per_image_standardization(img), inputs,dtype = tf.float32)
  #   pdb.set_trace()
     conv1 = tf.nn.conv2d(inputs, kernel1, [1, 1, 1, 1], padding='SAME')
     #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
@@ -107,7 +107,7 @@ with tf.name_scope('max_pool_conv1') as scope:
     pool1 = tf.nn.max_pool(local_cp2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
 with tf.name_scope('dropout_conv1') as scope:
-    dropout1 = tf.nn.dropout(pool1,keep_prob=0.5, name="dropout1") 
+    dropout1 = tf.nn.dropout(pool1,keep_prob) 
 
 #CONV2
 with tf.name_scope('conv-2') as scope:
@@ -154,7 +154,7 @@ with tf.name_scope('avg_pool_conv2') as scope:
     pool2 = tf.nn.avg_pool(local_cp4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
 with tf.name_scope('dropout_conv2') as scope:
-    dropout2 = tf.nn.dropout(pool2,keep_prob=0.5,name="dropout2") 
+    dropout2 = tf.nn.dropout(pool2, keep_prob) 
 
 with tf.name_scope('conv-3') as scope:
     kernel3 = _variable_with_weight_decay('weights',

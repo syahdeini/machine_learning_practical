@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import pdb
 
 
-experiment_name = "3_layer_conv"
+experiment_name = "1_layer_conv"
 
 def fully_connected_layer(inputs, input_dim, output_dim, nonlinearity=tf.nn.relu):
     weights = tf.Variable(
@@ -25,9 +25,13 @@ def list_to_file(thelist,filename):
 
 
 def _variable_with_weight_decay(name, shape, stddev, wd):
-    initial = tf.truncated_normal(shape, stddev=0.1)
-    return tf.Variable(initial)
+  dtype = tf.float32
+  var =  tf.Variable(
+        tf.truncated_normal(
+            shape=shape,stddev=0.01,mean=1.0), 
+        'weights')
 
+  return var
 
 
 num_hidden = 200
@@ -68,60 +72,10 @@ with tf.name_scope('conv-1') as scope:
     pool1 = tf.nn.max_pool(local1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                          padding='SAME')
 
-with tf.name_scope('conv-2') as scope:
-#    pdb.set_trace()
-    kernel2 = _variable_with_weight_decay('weights2',
-                                         shape=[5, 5, conv1_out_size, conv1_out_size],
-                                         stddev=5e-2,
-                                         wd=0.0)
-
-    conv2 = tf.nn.conv2d(pool1, kernel2, [1, 1, 1, 1], padding='SAME')
-    #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases2 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
-    pre_activation2 = tf.nn.bias_add(conv2, biases2)
-    # conv1 = tf.nn.relu(pre_activation)
-    local2 = tf.nn.relu(pre_activation2)
-    # pool1
-    pool2 = tf.nn.max_pool(local2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
-with tf.name_scope('conv-3') as scope:
-#    pdb.set_trace()
-    kernel3 = _variable_with_weight_decay('weights3',
-                                         shape=[5, 5, conv1_out_size, conv1_out_size],
-                                         stddev=5e-2,
-                                         wd=0.0)
-
-    conv3 = tf.nn.conv2d(pool2, kernel3, [1, 1, 1, 1], padding='SAME')
-    #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases3 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
-    pre_activation3 = tf.nn.bias_add(conv3, biases3)
-    # conv1 = tf.nn.relu(pre_activation)
-    local3 = tf.nn.relu(pre_activation3)
-    # pool1
-    pool3 = tf.nn.max_pool(local3, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
-    
-with tf.name_scope('conv-4') as scope:
-#    pdb.set_trace()
-    kernel4 = _variable_with_weight_decay('weights3',
-                                         shape=[5, 5, conv1_out_size, conv1_out_size],
-                                         stddev=5e-2,
-                                         wd=0.0)
-
-    conv4 = tf.nn.conv2d(pool3, kernel4, [1, 1, 1, 1], padding='SAME')
-    #biases = _variable_on_cpu('biases', [64], tf.constant_initializer(0.0))
-    biases4 = tf.Variable(tf.zeros([conv1_out_size]), 'biases') 
-    pre_activation4 = tf.nn.bias_add(conv4, biases4)
-    # conv1 = tf.nn.relu(pre_activation)
-    local4 = tf.nn.relu(pre_activation4)
-    # pool1
-    pool4 = tf.nn.max_pool(local4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
-                         padding='SAME')
- 
 # Move everything into depth so we can perform a single matrix multiply.
 with tf.name_scope('Dense-Relu_Layer') as scope:
     # flattening the input
-    last_layer = pool4
+    last_layer = pool1
     tot_shape=last_layer.get_shape()[1].value*last_layer.get_shape()[2].value*last_layer.get_shape()[3].value
     reshape = tf.reshape(last_layer, [BATCH_SIZE,tot_shape])
     weights = _variable_with_weight_decay('weights3', shape=[tot_shape, tot_shape],stddev=1.0, wd=0.0)
@@ -134,7 +88,6 @@ with tf.variable_scope('softmax_linear') as scope:
                                           stddev=1.0, wd=0.0)
     biases = tf.Variable(tf.zeros([NUM_CLASSES]), 'biases') 
     softmax_linear = tf.add(tf.matmul(local3, weights), biases)
-    soft_max_out = tf.nn.softmax(softmax_linear)
 
 with tf.name_scope('error'):
     out_login = tf.nn.softmax_cross_entropy_with_logits(logits = softmax_linear, labels=targets)
@@ -148,7 +101,7 @@ with tf.name_scope('accuracy'):
 
 # use adam optimizer 
 with tf.name_scope('train'):
-    train_step = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(error)
+    train_step = tf.train.AdamOptimizer(learning_rate=0.001).minimize(error)
     
 init = tf.global_variables_initializer()
 # begin training
